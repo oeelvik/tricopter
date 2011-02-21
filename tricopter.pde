@@ -1,5 +1,6 @@
 #include <SatelliteRecive.h>
 #include <Servo.h>
+#include <IMU.h>
 
 //Sensor pins
 #define GYRO_ROLL_PIN 4
@@ -8,74 +9,76 @@
 #define ACC_ROLL_PIN 1
 #define ACC_NICK_PIN 2
 #define ACC_VERT_PIN 0
-#define YAW_SERVO_PIN 9
+
+//Output pins
+#define YAW_SERVO_PIN 6
+#define REAR_MOTOR_PIN 9
+#define RIGHT_MOTOR_PIN 10
+#define LEFT_MOTOR_PIN 11
 
 //Sensor reversing
-#define GYRO_ROLL_DIR 0
-#define GYRO_NICK_DIR 0
-#define GYRO_YAW_DIR 0
-#define ACC_ROLL_DIR 1
-#define ACC_NICK_DIR 1
-#define ACC_VERT_DIR 0
+boolean GYRO_ROLL_REV = true;
+boolean GYRO_NICK_REV = true;
+boolean GYRO_YAW_REV = true;
+boolean ACC_ROLL_REV = false;
+boolean ACC_NICK_REV = false;
+boolean ACC_VERT_REV = false;
 
 //Accelerometer trim
-#define ACC_ROLL_TRIM -11
-#define ACC_NICK_TRIM 0
-#define ACC_VERT_TRIM 0
+#define ACC_ROLL_TRIM -12
+#define ACC_NICK_TRIM -10
+#define ACC_VERT_TRIM 40
 
-//Accelerometer value at 1g of force
-float acc_1g = 102;//(float) 300 / 3300 * 1024; //300[mV pr g] / 3300[Aref] * 1024 = 93 [val at 1g]
-
-//The accelerometer gain on the complementary filter
+//IMU settings:
 float acc_gain = 0.04;
+float gyro_scale = 11.044;//(1024/360)/1024 * 3,3/0,00083 (0,83mv/deg/sec)
+float acc_scale = (float)1024 / 4 / 102;//(float) 300 / 3300 * 1024; //300[mV pr g] / 3300[Aref] * 1024 = 93 [val at 1g] //Adjusted to 102 after trail and error
 
-//Gyro value at angular velocity of 1 degree / sec
-float gyro_1d = 0.83 / 3300 * 1024;//0.83[mV pr degree] / 3300[Aref] * 1024 = 0,2576[val pr degree pr sec]
-
-//The gyro gain on the complementary filter
-float gyro_gain = 1 - acc_gain;
-
-//Sensor signal scale
-float acc_scale = 90 / acc_1g;
-
-//Sensor initial values
-int init_gyro_roll = 0;
-int init_gyro_nick = 0;
-int init_gyro_yaw = 0;
-int init_acc_roll = 511 + ACC_ROLL_TRIM;
-int init_acc_nick = 511 + ACC_NICK_TRIM;
-int init_acc_vert = 511 + ACC_VERT_TRIM;
-
-//Vessals orientation
-float roll_angle = 0;
-float nick_angle = 0;
-float yaw_angle = 0;
-
+//Loop Timers
 unsigned long fast_loop_timer = 0;
 unsigned long fast_loop_count = 0;
 unsigned int medium_loop_count = 0;
 
-float gyro_dt = 0;
 
 SatelliteRecive reciver;
 Servo yawServo;
+Servo rearMotor;
+Servo rightMotor;
+Servo leftMotor;
+IMU imu;
 
-int val = 0;
+float K = 1;
+float Kp = 1.3;
+float Ki = 0.05;
+float Kd = 0.80;
+
 
 void setup(){
   analogReference(EXTERNAL);
   
+  //Setup IMU
+  imu.setGyroScale(gyro_scale);
+  imu.setAccScale(acc_scale);
+  imu.setAccGain(acc_gain);
+  imu.setAccTrim(ACC_ROLL_TRIM, ACC_NICK_TRIM, ACC_VERT_TRIM);
+  imu.setPins(GYRO_ROLL_PIN, GYRO_NICK_PIN, GYRO_YAW_PIN, ACC_ROLL_PIN, ACC_NICK_PIN, ACC_VERT_PIN);
+  imu.setReversing(GYRO_ROLL_REV, GYRO_NICK_REV, GYRO_YAW_REV, ACC_ROLL_REV, ACC_NICK_REV, ACC_VERT_REV);
+  imu.calibrateGyro();
+  
   Serial.begin(115200);
   yawServo.attach(YAW_SERVO_PIN);
   yawServo.write(90);
-  calibrate();
+  rearMotor.attach(REAR_MOTOR_PIN);
+  rearMotor.write(0);
+  rightMotor.attach(RIGHT_MOTOR_PIN);
+  rightMotor.write(0);
+  leftMotor.attach(LEFT_MOTOR_PIN);
+  leftMotor.write(0);
 }
 
 void loop(){
   //50 Hz Loop
   if(millis()-fast_loop_timer > 19){
-    int timeMillis = millis() - fast_loop_timer;
-    gyro_dt = (float) timeMillis / 1000.f;
     fast_loop_timer = millis();
     fast_loop_count++;
     
@@ -90,8 +93,48 @@ void loop(){
 }
 
 void fast_loop(){
-  calcAttitude();
-  yawServo.write(map(reciver.getRudd(),RXMIN,RXMAX,0,179));
+  /*PSEUDO CODE
+  updateIMU
+  PID Calculations:
+  -rollForce
+  -nickForce
+  -yawForce
+  Update engines
+  
+  */
+  
+  imu.update();
+  //yawServo.write(map(reciver.getRudd(),RXMIN,RXMAX,0,179));
+  
+  //PID param trim
+  K = (float)(reciver.getElev() - 511)/10;
+  Kp = (float)(reciver.getRudd() - 511)/50;
+  Ki = (float)(reciver.getGear() - 870)/100;
+  Kd = (float)(reciver.getFlap() - 511)/50;
+  
+  Serial.print("K: ");
+  Serial.print(K);
+  Serial.print("\t");
+  Serial.print("Kp: ");
+  Serial.print(Kp);
+  Serial.print("\t");
+  Serial.print("Ki: ");
+  Serial.print(Ki);
+  Serial.print("\t");
+  Serial.print("Kd: ");
+  Serial.print(Kd);
+  Serial.print("\t");
+  
+  int left = 10;
+  if(reciver.getThro() > 200) left = constrain(map(reciver.getThro() + updatePid(reciver.getAile(), imu.getRoll()), -1024, 1024, 10, 179), 10, 179);
+  
+  yawServo.write(left);
+  
+  Serial.print(left);
+  Serial.print("\t");
+  //Serial.print(updatePid(reciver.getAile(), imu.getRoll()));
+  Serial.println("\t");
+  
   
 }
 
@@ -104,14 +147,14 @@ void medium_loop(){
       break;
     case 1:
       medium_loop_count++;
-      send_location();
+      //send_location();
       break;
     case 2:
       medium_loop_count++;
       break;
     case 3:
       medium_loop_count++;
-      send_attitude();
+      //send_attitude();
       break;
     case 4:
       medium_loop_count = 0;
@@ -121,82 +164,30 @@ void medium_loop(){
 }
 
 void slow_loop(){
-  
-}
-
-void calibrate(){
-  long v = 0;
-  for(int i = 0; i < 50; i++) v += analogRead(GYRO_ROLL_PIN);
-  init_gyro_roll = v/50;
-  v = 0;
-  for(int i = 0; i < 50; i++) v += analogRead(GYRO_NICK_PIN);
-  init_gyro_nick = v/50;
-  v = 0;
-  for(int i = 0; i < 50; i++) v += analogRead(GYRO_YAW_PIN);
-  init_gyro_yaw = v/50;
-}
-
-float getGyroRoll(){
-  if(GYRO_ROLL_DIR == 0){
-    return (float)(init_gyro_roll - analogRead(GYRO_ROLL_PIN)) / gyro_1d;
-  } else {
-    return (float)(analogRead(GYRO_ROLL_PIN) - init_gyro_roll) / gyro_1d;
-  }
-}
-
-int getGyroNick(){
-  if(GYRO_NICK_DIR == 0){
-    return (float)(init_gyro_nick - analogRead(GYRO_NICK_PIN)) / gyro_1d;
-  } else {
-    return (float)(analogRead(GYRO_NICK_PIN) - init_gyro_nick) / gyro_1d;
-  }
-}
-
-int getGyroYaw(){
-  if(GYRO_YAW_DIR == 0){
-    return (float)(init_gyro_yaw - analogRead(GYRO_YAW_PIN))  / gyro_1d;
-  } else {
-    return (float)(analogRead(GYRO_YAW_PIN) - init_gyro_yaw)  / gyro_1d;
-  }
-}
-
-int getAccRoll(){
-  if(ACC_ROLL_DIR == 0){
-    return (float)(init_acc_roll - analogRead(ACC_ROLL_PIN)) * acc_scale;
-  } else {
-    return (float)(analogRead(ACC_ROLL_PIN) - init_acc_roll) * acc_scale;
-  }
-}
-
-int getAccNick(){
-  if(ACC_NICK_DIR == 0){
-    return (float)(init_acc_nick - analogRead(ACC_NICK_PIN)) * acc_scale;
-  } else {
-    return (float)(analogRead(ACC_NICK_PIN) - init_acc_nick) * acc_scale;
-  }
-}
-
-int getAccVert(){
-  if(ACC_VERT_DIR == 0){
-    return (float)(init_acc_vert - analogRead(ACC_VERT_PIN)) * acc_scale;
-  } else {
-    return (float)(analogRead(ACC_VERT_PIN) - init_acc_vert) * acc_scale;
-  }
-}
-
-//Complementary Filter
-void calcAttitude(){
-  roll_angle = (gyro_gain * (roll_angle + (getGyroRoll() * gyro_dt))) + (acc_gain * getAccRoll());
-  nick_angle = (gyro_gain * (nick_angle + (getGyroNick() * gyro_dt))) + (acc_gain * getAccNick());
-  yaw_angle = yaw_angle + (getGyroYaw() * gyro_dt);
-  
-  //Wrap around:
-  /*while(roll_angle > 180) roll_angle = roll_angle - 180;
-  while(roll_angle < -180) roll_angle = roll_angle + 180;
-  while(nick_angle > 180) nick_angle = nick_angle - 180;
-  while(nick_angle < -180) nick_angle = nick_angle + 180;*/
-  while(yaw_angle > 360) yaw_angle = yaw_angle - 360;
-  while(yaw_angle < 0) yaw_angle = yaw_angle + 360;
+  /*GUI setup //TODO: implement softwareSerial
+  if (Serial.available() > 0) {
+    byte command = Serial.read();
+    switch (command){
+      case 0x10: //K
+        K = Serial.read();
+        Serial.print("K: ");
+        Serial.println(K);
+        break;
+      case 0x11: //Kp
+        Kp = Serial.read();
+        break;
+      case 0x12: //Ki
+        Ki = Serial.read();
+        break;
+      case 0x13: //Kd
+        Kd = Serial.read();
+        break;
+    }
+    
+    // say what you got:
+    Serial.print("I received: ");
+    Serial.println(incomingByte, DEC);
+  }*/
 }
 
 void send_attitude(){
@@ -207,9 +198,9 @@ void send_attitude(){
   Serial.print(",THH:"); //Throttle
   Serial.print(map(reciver.getThro(),153,862,0,100), DEC);
   Serial.print (",RLL:"); //Roll
-  Serial.print(roll_angle, DEC);//(analogRead(ACC_ROLL_PIN) - init_acc_roll) * acc_scale, DEC);
+  Serial.print(imu.getRollDegree());//(analogRead(ACC_ROLL_PIN) - init_acc_roll) * acc_scale, DEC);
   Serial.print (",PCH:"); //Pitch
-  Serial.print(nick_angle, DEC);
+  Serial.print(imu.getNickDegree());
   Serial.println(",***"); //Suffix
 }
 
@@ -228,7 +219,7 @@ void send_location(){
   Serial.print(",ALH:"); //Target Altitude
   Serial.print("450");
   Serial.print(",CRS:"); //Course over ground in degrees
-  Serial.print(yaw_angle); 
+  Serial.print(imu.getYawDegree()); 
   Serial.print(",BER:"); //Bearing (target heading)
   Serial.print("94");
   Serial.print(",WPN:"); //Waypoint number
@@ -238,4 +229,55 @@ void send_location(){
   Serial.print(",BTV:"); //Battery voltage
   Serial.print("11840");
   Serial.println(",***"); //suffix
+}
+
+int integrated_error = 0;
+int last_error = 0;
+
+int updatePid(int targetPosition, int currentPosition)   {
+  int error = targetPosition - currentPosition;
+  int pTerm = Kp * error;
+  integrated_error += error; 
+  integrated_error = constrain(integrated_error, -10000, 10000);  
+  int iTerm = Ki * integrated_error;
+  int dTerm = Kd * (error - last_error);                            
+  last_error = error;
+  
+  /*Serial.print(pTerm);
+  Serial.print("\t");
+  Serial.print(iTerm);
+  Serial.print("\t");
+  Serial.print(dTerm);
+  Serial.print("\t");
+  Serial.print(-constrain(K*(pTerm + iTerm + dTerm), -1024, 1024));
+  Serial.print("\t");*/
+  
+  
+  return constrain(K*(pTerm + iTerm + dTerm), -1024, 1024);
+}
+
+/**
+ * Update the motors thrust and servo angle based on desired forses
+ * @param int throttle Desired throttle force (0-1023)
+ * @param int roll Desired roll torque (0-1023)
+ * @param int nick Desired nick torque (0-1023)
+ * @param int yaw Desired yaw torque (0-1023)
+ */
+void setThrust(int throttle, int roll, int nick, int yaw ){
+  
+  //half roll on left halfe on right, halfe roll back 1/4 right and 1/4 left
+  int left = constrain(map(throttle + (roll / 2) + (nick / 4), 0, 1024, 0, 179), 0, 179);
+  int right = constrain(map(throttle - (roll / 2) + (nick / 4), 0, 1024, 0, 179), 0, 179);
+  
+  //added yaw angle devided by some constant to compensate for vertical thrust loss
+  //TODO: adjust constant
+  int rear = constrain(map(throttle - (nick / 2) + (abs(yaw - 511) / 4), 0, 1024, 0, 179), 0, 179);
+  
+  //yaw servo angle
+  int yawVal = constrain(map(yaw, 0, 1024, 0, 179), 0, 179);
+  
+  yawServo.write(yawVal);
+  leftMotor.write(left);
+  rightMotor.write(right);
+  rearMotor.write(rear);
 }
