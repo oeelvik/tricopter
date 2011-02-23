@@ -21,10 +21,13 @@ int byteCount = 255;
 
 Serial serial;
 PFont font;
+
 TricopterGraph tri;
 LineGraphView g1;
 LineGraph p1;
 LineGraph p2;
+
+SerialComHandler serialHandler;
 
 void setup() {
   size(screen.width,screen.height);
@@ -32,6 +35,9 @@ void setup() {
   println(Serial.list());
   if(Serial.list().length > 0) serial = new Serial(this, Serial.list()[0], 115200);
   else println("No serial port avilable");
+  
+  
+  
   
   resetPlot();
   resetBarGraphs();
@@ -48,10 +54,63 @@ void setup() {
   p2.setValue(100);
   
   
-  /*test test = new test();
   
-  byte[] s = { 9,8,7,6};
-  test.setData(s);*/
+  SerialSerializable t = new test();
+  SerialSerializable t2 = new test();
+  /*
+  
+  print(t.v1);
+  print("\t");
+  print(t.v2);
+  print("\t");
+  println(t.v3);
+  
+  print(t2.v1);
+  print("\t");
+  print(t2.v2);
+  print("\t");
+  println(t2.v3);
+  byte[] s = t.toSerialStreem();
+  t2.parseSerialStreem(s);
+  
+  print(t.v1);
+  print("\t");
+  print(t.v2);
+  print("\t");
+  println(t.v3);
+  
+  print(t2.v1);
+  print("\t");
+  print(t2.v2);
+  print("\t");
+  println(t2.v3);*/
+  
+  
+  serialHandler = new SerialComHandler();
+  serialHandler.addObject(byte(0), t);
+  
+  test t1 = (test) t;
+  print(t1.v1);
+  print("\t");
+  print(t1.v2);
+  print("\t");
+  println(t1.v3);
+  
+  byte[] data = {'>', '>', '>', byte(0), 10, 20, 30, 40, 50, 60, 70, 80, 90, '*', '*', '*'};
+  for(int i = 0; i < data.length; i++){
+    serialHandler.receive(data[i]);
+  }
+  
+  byte[] data2 = {'-', '-', '-', byte(0), 90, 80, 70, 60, 50, 40, 30, 20, 10, '*', '*', '*'};
+  for(int i = 0; i < data2.length; i++){
+    serialHandler.receive(data2[i]);
+  }
+  
+  print(t1.v1);
+  print("\t");
+  print(t1.v2);
+  print("\t");
+  println(t1.v3);
 }
 
 void serialEvent(Serial myPort) {
@@ -211,8 +270,8 @@ class LineGraphView{
       LineGraph g = (LineGraph)graphs.get(i);
       stroke(g.getColor());
       
-      int value = (int)map(constrain(g.getValue(), minValue, maxValue), minValue, maxValue, 0, this._height - 2);
-      int lastVal = (int)map(constrain(g.getLastValue(), minValue, maxValue), minValue, maxValue, 0, this._height - 2);
+      int value = (int)map(constrain(g.getValue(), g.getMinValue(), g.getMaxValue()), g.getMinValue(), g.getMaxValue(), 0, this._height - 2);
+      int lastVal = (int)map(constrain(g.getLastValue(), g.getMinValue(), g.getMaxValue()), g.getMinValue(), g.getMaxValue(), 0, this._height - 2);
       
       
       line(this._x + this._pos, this._y + this._height - 1 - value, this._x + this._pos + 1, this._y + this._height - 1 - lastVal);
@@ -225,6 +284,9 @@ class LineGraphView{
 class LineGraph{
   color _color = color(255);
   String _label = "";
+  
+  int minValue = 0;
+  int maxValue = 255;
   
   int _value = 0;
   int _lastVal = 0;
@@ -253,6 +315,20 @@ class LineGraph{
   
   int getLastValue(){
     return this._lastVal;
+  }
+  
+  void setLimits(int minVal, int maxVal){
+    this.minValue = minVal;
+    this.maxValue = maxVal;
+    
+  }
+  
+  int getMinValue(){
+    return this.maxValue;
+  }
+  
+  int getMaxValue(){
+    return this.maxValue;
   }
 }
 
@@ -386,82 +462,198 @@ class TricopterGraph{
 }
 
 
-/*
-class remoteCall{
-  HashMap CMD = new HashMap();
+
+class Tricopter implements SerialSerializable{
+  public RCReceiver receiver;
+  public IMU imu;
   
-  
-  remoteCall(){}
-  
-  void addCMD(byte CMD, CMDhandler handler){
-    CMD.put(CMD, handler);
+  Tricopter(){
+    
   }
   
-  void;
-  
-}*/
-
-
-interface CMDhandler{
-  byte[] getData();
-  void setData(byte[] data);
-}
-
-class test implements CMDhandler{
-  test(){}
-  
-  byte[] getData(){
-    byte[] r = {9,8,7,6};
+  byte[] toSerialStreem(){
+    byte[] r = new byte[3];
+    /*r[0] = byte (constrain(map(v1, 0, 1023, 0, 255), 0, 255));
+    r[1] = byte (constrain(map(v2, 0, 1023, 0, 255), 0, 255));
+    r[2] = byte (constrain(map(v3, 0, 1023, 0, 255), 0, 255));*/
     return r;
   }
   
-  void setData(byte[] data){
-    print(data[0]);
-    print(data[1]);
-    print(data[2]);
-    println(data[3]);
+  void parseSerialStreem(byte[] data){
+    /*v1 = (int) map(data[0], 0, 255, 0, 1023);
+    v2 = (int) map(data[1], 0, 255, 0, 1023);
+    v3 = (int) map(data[2], 0, 255, 0, 1023);*/
+  }
+  
+  class RCReceiver implements SerialSerializable{
+    public byte thro = 0;
+    public byte aile = 0;
+    public byte elev = 0;
+    public byte rudd = 0;
+    public byte gear = 0;
+    public byte flap = 0;
+    
+    public byte thro_rev = 0;
+    public byte aile_rev = 0;
+    public byte elev_rev = 0;
+    public byte rudd_rev = 0;
+    public byte gear_rev = 0;
+    public byte flap_rev = 0;
+    
+    byte[] data = new byte[12];
+    
+    
+    byte[] toSerialStreem(){
+      data[0] = thro;
+      data[1] = aile;
+      data[2] = elev;
+      data[3] = rudd;
+      data[4] = gear;
+      data[5] = flap;
+      
+      data[6] = thro_rev;
+      data[7] = aile_rev;
+      data[8] = elev_rev;
+      data[9] = rudd_rev;
+      data[10] = gear_rev;
+      data[11] = flap_rev;
+      return data;
+    }
+    
+    void parseSerialStreem(byte[] data){
+      thro = data[0];
+      aile = data[0];
+      elev = data[0];
+      rudd = data[0];
+      gear = data[0];
+      flap = data[0];
+      
+      thro_rev = data[0];
+      aile_rev = data[0];
+      elev_rev = data[0];
+      rudd_rev = data[0];
+      gear_rev = data[0];
+      flap_rev = data[0];
+    }
+  }
+  
+  class IMU implements SerialSerializable{
+    byte[] toSerialStreem(){
+      byte[] r = new byte[3];
+      /*r[0] = byte (constrain(map(v1, 0, 1023, 0, 255), 0, 255));
+      r[1] = byte (constrain(map(v2, 0, 1023, 0, 255), 0, 255));
+      r[2] = byte (constrain(map(v3, 0, 1023, 0, 255), 0, 255));*/
+      return r;
+    }
+    
+    void parseSerialStreem(byte[] data){
+      /*v1 = (int) map(data[0], 0, 255, 0, 1023);
+      v2 = (int) map(data[1], 0, 255, 0, 1023);
+      v3 = (int) map(data[2], 0, 255, 0, 1023);*/
+    }
+    
   }
 }
 
-/*
-class Tricopter{
-  byte receiveCMD[] = {
-      0x00 => 'RX_THRO'
-      ,0x01 => 'RX_AILE'
-      ,0x02 => 'RX_ELEV'
-      ,0x03 => 'RX_RUDD'
-      ,0x04 => 'RX_GEAR'
-      ,0x05 => 'RX_FLAP'
-      
-      ,0x20 => 'IMU_ROLL'
-      ,0x21 => 'IMU_NICK'
-      ,0x22 => 'IMU_YAW'
-      ,0x30 => 'ROLL_SET_POINT'
-      ,0x31 => 'NICK_SET_POINT'
-      ,0x32 => 'YAW_SET_POINT'
-      ,0x40 => 'YAW_SET_POINT'
-      
-     
-    byte receiveSetupCMD[] = {
-      ,0x10 => 'RX_THRO_REV'
-      ,0x11 => 'RX_AILE_REV'
-      ,0x11 => 'RX_ELEV_REV'
-      ,0x11 => 'RX_RUDD_REV'
-      ,0x11 => 'RX_GEAR_REV'
-      ,0x11 => 'RX_FLAP_REV'
+class triGUI{
   
-  byte mode = 0;
-  byte throttle = 0;
+  int x;
+  int y;
+  int width;
+  int height;
   
-  byte rollSetPoin = 0;
-  byte nickSetPoin = 0;
-  byte yawSetPoin = 0;
+  Tricopter tricopter;
   
-  void receive(byte cmd, byte value){
+  TricopterGraph tricopterGraph;
+  
+  LineGraphView rollGraph;
+  LineGraph rollSetPointGraph = new LineGraph("Set Point", color(0,0,255));
+  LineGraph rollMeasurementGraph = new LineGraph("Measurement", color(0,255,0));
+  LineGraph rollThrustGraph = new LineGraph("Thrust", color(255,0,0));
+  
+  triGUI(int x, int y, int width, int height){
+    this.x = x;
+    this.y = y;
+    this.width = width;
+    this.height = height;
     
+    int graph_height = this.height/3;
+    
+    rollGraph = new LineGraphView(this.x + 300, this.y, this.width - 300, graph_height);
+    rollGraph.addGraph(rollSetPointGraph);
+    rollGraph.addGraph(rollMeasurementGraph);
+    rollGraph.addGraph(rollThrustGraph);
   }
   
-  void send(byte CMD, byte value){
+  void update(){
+    rollSetPointGraph.setValue(this.tricopter.receiver.aile);
+    rollMeasurementGraph.setValue(0);
+    rollThrustGraph.setValue(0);
     
+    rollGraph.plot();
   }
-}*/
+  
+  
+}
+
+
+
+interface SerialSerializable{
+  byte[] toSerialStreem();
+  void parseSerialStreem(byte[] data);
+}
+
+class SerialComHandler{
+  final int BYTE_LIMIT = 50;
+  
+  HashMap serializableObjects = new HashMap();
+  
+  byte CMD;
+  byte[] data = new byte[BYTE_LIMIT];
+  
+  boolean inMessage = false;
+  int messageByteCount = 0;
+  int postFixCount = 0;
+  
+  void addObject(byte CMD, SerialSerializable object){
+    serializableObjects.put(CMD, object);
+  }
+  
+  void receive(byte inByte){
+    messageByteCount++;
+    
+    if(!inMessage  && inByte != '>'){ //Not this protocol
+      messageByteCount = 0;
+    } else if(inByte == '>' && messageByteCount == 3){ //prefix received
+      inMessage = true;
+      postFixCount = 0;
+      this.CMD = 0;
+    } else if (inMessage){
+      
+      if(inByte == '*') postFixCount++;
+      else postFixCount = 0;
+      if(postFixCount == 3 || messageByteCount - 5 >= BYTE_LIMIT) { //All bytes in message reseived
+        inMessage = false;
+        callReceiver(this.CMD);
+      }
+      
+      if(messageByteCount == 4) this.CMD = inByte;
+      else data[messageByteCount - 5] = inByte;
+    }
+  }
+  
+  void send(byte CMD){
+    if(this.serializableObjects.containsKey(CMD)){
+      //TODO: Send by serial
+      //((SerialSerializable)this.serializableObjects.get(CMD)).parseSerialStreem(this.data);
+    }
+  }
+  
+  void callReceiver(byte CMD){
+    
+      println(CMD);
+    if(this.serializableObjects.containsKey(CMD)){
+      ((SerialSerializable)this.serializableObjects.get(CMD)).parseSerialStreem(this.data);
+    }
+  }
+}
