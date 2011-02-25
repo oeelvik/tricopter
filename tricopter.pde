@@ -54,7 +54,7 @@ unsigned long fast_loop_timer = 0;
 unsigned long fast_loop_count = 0;
 unsigned int medium_loop_count = 0;
 
-
+//TODO: implement falesafe center values
 SatelliteReceive receiver;
 Servo yawServo;
 Servo rearMotor;
@@ -216,7 +216,105 @@ void slow_loop(){
 //TODO: implement GUI config tool
 void triGUI(){
   if(TRIGUI_ENABLED){
-    Serial.println();
+    //TODO: split in multiple functions and run in different medium_loop cases to spred load
+    //RECEIVER
+    Serial.print(">>>"); //Prefix
+    Serial.print(byte(1)); //CMD receiver
+    
+    //Signal
+    Serial.print(receiver.getThro() / 4,BYTE);
+    Serial.print(receiver.getAile() / 4,BYTE);
+    Serial.print(receiver.getElev() / 4,BYTE);
+    Serial.print(receiver.getRudd() / 4,BYTE);
+    Serial.print(receiver.getGear() / 4,BYTE);
+    Serial.print(receiver.getFlap() / 4,BYTE);
+    
+    //Reversing
+    Serial.print(0,BYTE);
+    Serial.print(0,BYTE);
+    Serial.print(0,BYTE);
+    Serial.print(0,BYTE);
+    Serial.print(0,BYTE);
+    Serial.print(0,BYTE);
+    
+    Serial.println("***"); //Suffix
+    
+    //IMU
+    Serial.print(">>>"); //Prefix
+    Serial.print(byte(2)); //CMD IMU
+    
+    //Signal
+    Serial.print(imu.getRoll() / 4,BYTE);
+    Serial.print(imu.getNick() / 4,BYTE);
+    Serial.print(imu.getYaw() / 4,BYTE);
+    
+    Serial.print(imu.getGyroRoll() / 4,BYTE);
+    Serial.print(imu.getGyroNick() / 4,BYTE);
+    Serial.print(imu.getGyroYaw() / 4,BYTE);
+    
+    Serial.print(imu.getAccRoll() / 4,BYTE);
+    Serial.print(imu.getAccNick() / 4,BYTE);
+    Serial.print(0,BYTE); // AccVert
+    
+    //Reversing
+    Serial.print(0,BYTE);
+    Serial.print(0,BYTE);
+    Serial.print(0,BYTE);
+    
+    Serial.print(0,BYTE);
+    Serial.print(0,BYTE);
+    Serial.print(0,BYTE);
+    
+    //Acc Trim
+    Serial.print(ACC_ROLL_TRIM,BYTE);
+    Serial.print(ACC_NICK_TRIM,BYTE);
+    Serial.print(ACC_VERT_TRIM,BYTE);
+    
+    //Gain
+    Serial.print(acc_gain,BYTE);
+    
+    Serial.println("***"); //Suffix
+    
+    //Tricopter
+    Serial.print(">>>"); //Prefix
+    Serial.print(byte(0)); //CMD Tricopter
+    
+    //------- Setup -------------
+    Serial.print(MOTOR_ENABLE,BYTE);
+    Serial.print(MIN_THROTTLE / 4,BYTE);
+    Serial.print(map(MIN_ESC, 0,179,0,1023),BYTE); //0-179
+    
+    //Serial communication
+    Serial.print(HK_ENABLED,BYTE);
+    Serial.print(TRIGUI_ENABLED,BYTE);
+    
+    //PID
+    Serial.print(1,BYTE);
+    Serial.print(0,BYTE);
+    Serial.print((int)(Kp * 25),BYTE);
+    Serial.print((int)(Ki * 1000),BYTE);
+    Serial.print((int)(Kd * 100),BYTE);
+    
+    //--------- Data --------------
+    Serial.print(millis() / 10000,BYTE); //time 0 - ca 45 min
+    Serial.print(((receiver.getThro() > MIN_THROTTLE)? 0x30 : 0x20), BYTE);
+    Serial.print(((receiver.getFlap() < RXCENTER) ? 0x00: 0x10), BYTE);
+   
+    //Motors and servo
+    Serial.print(map(leftThrust, 0, 179, 0, 255),BYTE);
+    Serial.print(map(rightThrust, 0, 179, 0, 255),BYTE);
+    Serial.print(map(rearThrust, 0, 179, 0, 255),BYTE);
+    Serial.print(map(yawPos, 0, 179, 0, 255),BYTE);
+    
+    //PID
+    Serial.print((rollForce + 1023) / 8,BYTE);
+    Serial.print((nickForce + 1023) / 8,BYTE);
+    Serial.print((yawForce + 1023) / 8,BYTE);
+    
+    Serial.println("***"); //Suffix
+    
+    /*Serial.println();
+    
     Serial.print(receiver.getRudd() / 4,BYTE);
     Serial.print(receiver.getThro() / 4,BYTE);
     Serial.print(receiver.getElev() / 4,BYTE);
@@ -241,7 +339,7 @@ void triGUI(){
     Serial.print(0,BYTE);
     Serial.print(0,BYTE);
     Serial.print(0,BYTE);
-    
+    */
   }
   
   //PID param trim
@@ -400,3 +498,5 @@ void setThrust(int throttle, int roll, int nick, int yaw ){
   Serial.print(yawVal);
   Serial.println("\t");*/
 }
+
+
