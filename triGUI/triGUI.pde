@@ -1,7 +1,10 @@
 import processing.serial.*;
 
-Serial serial;
+Serial serial = null;
 SerialComHandler serialHandler;
+
+boolean currentSetupReceived = false;
+int setupRequestTime = 0;
 
 TriGUI gui;
 
@@ -12,6 +15,8 @@ void setup() {
 
   serialHandler = new SerialComHandler();
   
+  //serial = new Serial(this, "COM3", 115200);
+  
   gui = new TriGUI( 0, 0, screen.width, screen.height, serialHandler);
 }
 
@@ -20,6 +25,10 @@ void serialEvent(Serial myPort) {
 }
 
 void draw() {
+  if(setupRequestTime + 1000 < millis() && serial != null && !gui.tricopter.config.currentSetupReceived) {
+    gui.serialHandler.send(5); //Request tricopter current config
+    setupRequestTime = millis();
+  }
   
   updateSetupView();
   gui.update();
@@ -32,9 +41,11 @@ class TriGUI {
   int width;
   int height;
   
-  SerialComHandler serialHandler;
+  public SerialComHandler serialHandler = new SerialComHandler();
 
   public Tricopter tricopter = new Tricopter();
+  
+  MessageView messages;
 
   TricopterGraph tricopterGraph;
   
@@ -60,6 +71,7 @@ class TriGUI {
   LineGraph yawSetPointGraph = new LineGraph("Set Point", color(0,0,255));
   LineGraph yawMeasurementGraph = new LineGraph("Measurement", color(0,255,0));
   LineGraph yawThrustGraph = new LineGraph("Thrust", color(255,0,0));
+  
 
   TriGUI(int x, int y, int width, int height, SerialComHandler serialHandler) {
     this.x = x;
@@ -67,10 +79,15 @@ class TriGUI {
     this.width = width;
     this.height = height;
     
+    this.messages = new MessageView(0,200,400,200,14);
+    
     this.serialHandler = serialHandler;
-    this.serialHandler.addObject(0, this.tricopter);
-    this.serialHandler.addObject(1, this.tricopter.receiver);
-    this.serialHandler.addObject(2, this.tricopter.imu);
+    this.serialHandler.addObject(1, this.messages); //Data
+    this.serialHandler.addObject(2, this.tricopter); //Data
+    this.serialHandler.addObject(3, this.tricopter.receiver); //Data
+    this.serialHandler.addObject(4, this.tricopter.imu); //Data
+    this.serialHandler.addObject(5, this.tricopter.config); //request config
+    this.serialHandler.addObject(6, this.tricopter.config); //set config
     
     
     createSetupView(0, 0, 400, 200);
@@ -109,6 +126,8 @@ class TriGUI {
   }
 
   void update() {
+    if(this.messages.isUpdated) this.messages.update();
+    
     if(!this.tricopter.isUpdated) return;
     this.tricopter.isUpdated = false;
     tricopterGraph.update(this.tricopter.leftMotor, this.tricopter.receiver.thro + this.tricopter.receiver.aile / 2 - this.tricopter.receiver.elev / 4
@@ -126,17 +145,19 @@ class TriGUI {
     receiverBars.update();
     
     rollSetPointGraph.setValue(this.tricopter.receiver.aile);
-    rollMeasurementGraph.setValue(this.tricopter.imu.roll);
+    if(this.tricopter.mode == 0x00) rollMeasurementGraph.setValue(this.tricopter.imu.roll);
+    else rollMeasurementGraph.setValue(this.tricopter.imu.gRoll);
     rollThrustGraph.setValue(this.tricopter.PIDRoll);
     rollGraph.plot();
     
     nickSetPointGraph.setValue(this.tricopter.receiver.elev);
-    nickMeasurementGraph.setValue(this.tricopter.imu.nick);
+    if(this.tricopter.mode == 0x00) nickMeasurementGraph.setValue(this.tricopter.imu.nick);
+    else nickMeasurementGraph.setValue(this.tricopter.imu.gNick);
     nickThrustGraph.setValue(this.tricopter.PIDNick);
     nickGraph.plot();
     
     yawSetPointGraph.setValue(this.tricopter.receiver.rudd);
-    yawMeasurementGraph.setValue(this.tricopter.imu.yaw);
+    yawMeasurementGraph.setValue(this.tricopter.imu.gYaw);
     yawThrustGraph.setValue(this.tricopter.PIDYaw);
     yawGraph.plot();
     

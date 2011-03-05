@@ -1,124 +1,121 @@
+//TODO: create HappyKillmore methods
+//TODO: enable turning on of serial coms
+//TODO: Change to PIDLibrary
+//TODO: Use software serial for communication with the compeuter
+//TODO: 
+
 #include <SatelliteReceive.h>
 #include <Servo.h>
 #include <IMU.h>
+#include <EEPROM.h>
+#include <NewSoftSerial.h>
 
-//Sensor pins
-#define GYRO_ROLL_PIN 4
-#define GYRO_NICK_PIN 3
-#define GYRO_YAW_PIN 5
-#define ACC_ROLL_PIN 1
-#define ACC_NICK_PIN 2
-#define ACC_VERT_PIN 0
 
-//Output pins
-#define YAW_SERVO_PIN 6
-#define REAR_MOTOR_PIN 9
-#define RIGHT_MOTOR_PIN 10
-#define LEFT_MOTOR_PIN 11
+#include "ConfigAdressing.cpp"
+#include "Mixer.h"
 
-//Sensor reversing
-boolean GYRO_ROLL_REV = true;
-boolean GYRO_NICK_REV = true;
-boolean GYRO_YAW_REV = true;
-boolean ACC_ROLL_REV = false;
-boolean ACC_NICK_REV = false;
-boolean ACC_VERT_REV = false;
 
-//Accelerometer trim
-#define ACC_ROLL_TRIM -12
-#define ACC_NICK_TRIM -10
-#define ACC_VERT_TRIM 40
+#define RESET_CONFIG 1 //Set to 1 to loade default config and save it to eeprom
 
-//Minimum throttle to start flight
-//TODO: test and adjust
-#define MIN_THROTTLE 200
+//-------------- Ground Station ------------------------
+#define GS_RX_PIN 6
+#define GS_TX_PIN 5
+#define GS_BYTE_LIMIT 50
 
-#define MOTOR_ENABLE 1
+NewSoftSerial gsSerial(GS_RX_PIN,GS_TX_PIN);
 
-//Minimum value to arm ESC
-//TODO: test and adjust
-#define MIN_ESC 10
+boolean gsInMessage = false;
+int gsMessageByteCount = 0;
+int gsPostFixCount = 0;
+int gsData[GS_BYTE_LIMIT];
+int gsDataByteCount = 0;
+int gsCMD;
 
-//Enable Happy Killmore data transfere 1 = enabled
-#define HK_ENABLED 0
-//Enable Processing triGUI data transfere 1 = enabled
-#define TRIGUI_ENABLED 1
+//---------------- TriGUI -------------
+#define TRIGUI_MESSAGE_TYPE_INFO 0
+#define TRIGUI_MESSAGE_TYPE_WARNING 1
+#define TRIGUI_MESSAGE_TYPE_ERROR 2
 
-//IMU settings:
-float acc_gain = 0.04;
-float gyro_scale = 11.044;//(1024/360)/1024 * 3,3/0,00083 (0,83mv/deg/sec)
-float acc_scale = (float)1024 / 4 / 102;//(float) 300 / 3300 * 1024; //300[mV pr g] / 3300[Aref] * 1024 = 93 [val at 1g] //Adjusted to 102 after trail and error
+//------------- Loop Timers --------------------
+unsigned long fastLoopTimer;
+unsigned long fastLoopCount;
+unsigned int mediumLoopCount;
 
-//Loop Timers
-unsigned long fast_loop_timer = 0;
-unsigned long fast_loop_count = 0;
-unsigned int medium_loop_count = 0;
-
-//TODO: implement falesafe center values
-SatelliteReceive receiver;
-Servo yawServo;
-Servo rearMotor;
-Servo rightMotor;
-Servo leftMotor;
-IMU imu;
-
+//--------- Desired forces ---------------
 int throttle = 0;
 int rollForce = 0;
 int nickForce = 0;
 int yawForce = 0;
 
-int leftThrust = 0;
-int rightThrust = 0;
-int rearThrust = 0;
-int yawPos = 0;
 
-//TODO: Switch to PIDLibrary
-float K = 1;
-float Kp = 1;
-float Ki = 0.05;
-float Kd = 0.8;
-int integrated_error = 0;
-int last_error = 0;
+//----------- Configuration --------------
+int config[CV_END_BYTE + 1];
 
+SatelliteReceive receiver;
+IMU imu;
+Mixer mix;
 
 void setup(){
   analogReference(EXTERNAL);
+  Serial.begin(115200);
+  
+  //Setup Ground Station Serial
+  gsSerial.begin(19200);
+  
+  if(RESET_CONFIG == 1) resetConfig();
+  
+  readEEPROMConfig();
+  
+  reloade();
+}
+
+void reloade(){
+  TriGUIsendMessage(TRIGUI_MESSAGE_TYPE_INFO,"Setting configuration");
+  
+  //TODO: setup receiver reversing
+  
+  TriGUIsendMessage(0, config[CV_IMU_GYRO_ROLL_PIN_BYTE]);
   
   //Setup IMU
+  float gyro_scale = 11.044;//(1024/360)/1024 * 3,3/0,00083 (0,83mv/deg/sec)
+  float acc_scale = (float)1024 / 4 / 102;//(float) 300 / 3300 * 1024; //300[mV pr g] / 3300[Aref] * 1024 = 93 [val at 1g] //Adjusted to 102 after trail and error
   imu.setGyroScale(gyro_scale);
   imu.setAccScale(acc_scale);
-  imu.setAccGain(acc_gain);
-  imu.setAccTrim(ACC_ROLL_TRIM, ACC_NICK_TRIM, ACC_VERT_TRIM);
-  imu.setPins(GYRO_ROLL_PIN, GYRO_NICK_PIN, GYRO_YAW_PIN, ACC_ROLL_PIN, ACC_NICK_PIN, ACC_VERT_PIN);
-  imu.setReversing(GYRO_ROLL_REV, GYRO_NICK_REV, GYRO_YAW_REV, ACC_ROLL_REV, ACC_NICK_REV, ACC_VERT_REV);
+  imu.setAccGain((float)config[CV_IMU_ACC_GAIN_BYTE] / 100);
+  imu.setAccTrim((config[CV_IMU_ACC_ROLL_TRIM_BYTE] * 4) - 511, (config[CV_IMU_ACC_NICK_TRIM_BYTE] * 4) - 511, (config[CV_IMU_ACC_VERT_TRIM_BYTE] * 4) - 511);
+  imu.setPins(config[CV_IMU_GYRO_ROLL_PIN_BYTE], config[CV_IMU_GYRO_NICK_PIN_BYTE], config[CV_IMU_GYRO_YAW_PIN_BYTE], config[CV_IMU_ACC_ROLL_PIN_BYTE], config[CV_IMU_ACC_NICK_PIN_BYTE], config[CV_IMU_ACC_VERT_PIN_BYTE]);
+  int reversing = config[CV_IMU_REVERSING_BYTE]; 
+  imu.setReversing( (bitRead(reversing,CV_IMU_GYRO_ROLL_REV_BIT )==1), (bitRead(reversing,CV_IMU_GYRO_NICK_REV_BIT )==1), (bitRead(reversing,CV_IMU_GYRO_YAW_REV_BIT )==1), (bitRead(reversing,CV_IMU_ACC_ROLL_REV_BIT )==1), (bitRead(reversing,CV_IMU_ACC_NICK_REV_BIT )==1), (bitRead(reversing,CV_IMU_ACC_VERT_REV_BIT )==1) );
   imu.calibrateGyro();
   
-  Serial.begin(115200);
-  yawServo.attach(YAW_SERVO_PIN);
-  yawServo.write(90);
-  rearMotor.attach(REAR_MOTOR_PIN);
-  rearMotor.write(MIN_ESC);
-  rightMotor.attach(RIGHT_MOTOR_PIN);
-  rightMotor.write(MIN_ESC);
-  leftMotor.attach(LEFT_MOTOR_PIN);
-  leftMotor.write(MIN_ESC);
+  //Setup Mixer
+  mix.setMinESC(map(config[CV_MIN_ESC_BYTE], 0, 255, 0, 179));
+  mix.setMotorsEnabled((bitRead(config[CV_TRICOPTER_ENABLE_BYTE], CV_MOTORS_ENABLE_BIT) == 1));
+  mix.setPins(config[CV_LEFT_MOTOR_PIN_BYTE], config[CV_RIGHT_MOTOR_PIN_BYTE], config[CV_REAR_MOTOR_PIN_BYTE], config[CV_YAW_SERVO_PIN_BYTE]);
 }
 
 void loop(){
   //50 Hz Loop
-  if(millis()-fast_loop_timer > 19){
-    fast_loop_timer = millis();
-    fast_loop_count++;
+  if(millis()-fastLoopTimer > 19){
+    fastLoopTimer = millis();
+    fastLoopCount++;
     
-    fast_loop();
+    fastLoop();
     
-    medium_loop();
+    mediumLoop();
   }
   
   //Make shure we get all updates from receiver
   if (Serial.available() > 0) {
-    receiver.regByte(Serial.read());
+    int inByte = Serial.read();
+    receiver.regByte(inByte);
+    gsReceive(inByte); //TODO: remove when soft serial is used
   }
+  //TODO: implement setup on startup or interrup with org SoftSerial. NewSoftSerial diturbs receiver signal
+  /*if (gsSerial.available() > 0)
+  {
+    gsReceive(gsSerial.read());
+  }*/
 }
 
 /**
@@ -129,34 +126,33 @@ void loop(){
  * -PID controll
  * -Thrust updates
  */
-void fast_loop(){
+ 
+void fastLoop(){
   imu.update();
   
-  throttle = 0;
-  rollForce = 0;
-  nickForce = 0;
-  yawForce = 0;
   
-  if(receiver.getThro() > MIN_THROTTLE){
+  if(receiver.getThro() > config[CV_MIN_THRO_BYTE] * 4){
     throttle = receiver.getThro();
     
-    //TODO: integrate yaw signal
-    
-    //TODO: remove safety "true ||" to enable switching to stunt mode
-    if(true || receiver.getFlap() < RXCENTER){ //Hover Mode (IMU stabled)
+    if(receiver.getFlap() < RXCENTER){ //Hover Mode (IMU stabled)
       //TODO: Switch to PIDLibrary
       rollForce = updatePid(receiver.getAile(), imu.getRoll());
       //nickForce = updatePid(receiver.getElev(), imu.getNick());
-      //yawForce = updatePid(receiver.getRudd(), imu.getYaw());
+      //yawForce = updatePid(receiver.getRudd(), imu.getGyroYaw() + 511); //Uses the derivated version (Gyro signal)
     } else { //Stunt Mode (Gyro stabled)
       //TODO: Switch to PIDLibrary
       //Gyro signal / 2 to increase max speed to 2 * 360 degree / sec
       rollForce = updatePid(receiver.getAile(), constrain((imu.getGyroRoll() / 2) + 511, 0, 1023));
-      //nickForce = updatePid(receiver.getElev(), constrain((imu.getGyroNick() / 2), 0, 1023));
-      //yawForce = updatePid(receiver.getRudd(), constrain((imu.getGyroYaw() / 2), 0, 1023));
+      //nickForce = updatePid(receiver.getElev(), constrain((imu.getGyroNick() / 2) + 511, 0, 1023));
+      //yawForce = updatePid(receiver.getRudd(), constrain((imu.getGyroYaw() / 2) + 511, 0, 1023));
     }
     
   } else {
+      throttle = 0;
+      rollForce = 0;
+      nickForce = 0;
+      yawForce = 0;
+    
     //TODO: Reset PID terms
   }
   
@@ -164,7 +160,7 @@ void fast_loop(){
   //Manual mode (Only for debug purpose)
   //setThrust(receiver.getThro(), receiver.getAile(), receiver.getElev(), receiver.getYaw());
   
-  setThrust(throttle, rollForce, nickForce, yawForce);
+  mix.setThrust(throttle, rollForce, nickForce, yawForce);
 }
 
 /**
@@ -177,49 +173,52 @@ void fast_loop(){
  * 3. Happy Killmore attitude
  * 4. slow_loop()
  */
-void medium_loop(){
+ 
+void mediumLoop(){
   //Each case at 10Hz
-  switch(medium_loop_count) {
+  switch(mediumLoopCount) {
     case 0:
-      medium_loop_count++;
+      TriGUIsendCopter();
       break;
     case 1:
-      medium_loop_count++;
-      triGUI();
+      TriGUIsendReceiver();
       break;
     case 2:
-      medium_loop_count++;
-      send_location();
+      TriGUIsendIMU();
+      //send_location();
       break;
     case 3:
-      medium_loop_count++;
-      send_attitude();
+      //send_attitude();
       break;
     case 4:
-      medium_loop_count = 0;
-      slow_loop();
+      mediumLoopCount = -1;
+      slowLoop();
       break;
   }
+  mediumLoopCount++;
 }
 
 /**
  * 10Hz loop
  */
  //TODO: split in 5 (2 Hz) like medium loop
-void slow_loop(){
+void slowLoop(){
   
 }
+
+
 
 /**
  * Communicate with config software
  */
 //TODO: implement GUI config tool
+/*
 void triGUI(){
   if(TRIGUI_ENABLED){
     //TODO: split in multiple functions and run in different medium_loop cases to spred load
     //RECEIVER
     Serial.print(">>>"); //Prefix
-    Serial.print(byte(1)); //CMD receiver
+    Serial.print(3,BYTE); //CMD receiver
     
     //Signal
     Serial.print(receiver.getThro() / 4,BYTE);
@@ -230,18 +229,18 @@ void triGUI(){
     Serial.print(receiver.getFlap() / 4,BYTE);
     
     //Reversing
+    /*Serial.print(0,BYTE);
     Serial.print(0,BYTE);
     Serial.print(0,BYTE);
     Serial.print(0,BYTE);
     Serial.print(0,BYTE);
     Serial.print(0,BYTE);
-    Serial.print(0,BYTE);
-    
-    Serial.println("***"); //Suffix
+    */
+  /*  Serial.println("***"); //Suffix
     
     //IMU
     Serial.print(">>>"); //Prefix
-    Serial.print(byte(2)); //CMD IMU
+    Serial.print(5,BYTE); //CMD IMU
     
     //Signal
     Serial.print(imu.getRoll() / 4,BYTE);
@@ -257,7 +256,7 @@ void triGUI(){
     Serial.print(0,BYTE); // AccVert
     
     //Reversing
-    Serial.print(0,BYTE);
+    /*Serial.print(0,BYTE);
     Serial.print(0,BYTE);
     Serial.print(0,BYTE);
     
@@ -272,13 +271,13 @@ void triGUI(){
     
     //Gain
     Serial.print(acc_gain,BYTE);
-    
-    Serial.println("***"); //Suffix
+    */
+    /*Serial.println("***"); //Suffix
     
     //Tricopter
     Serial.print(">>>"); //Prefix
-    Serial.print(byte(0)); //CMD Tricopter
-    
+    Serial.print(1, BYTE); //CMD Tricopter
+    /*
     //------- Setup -------------
     Serial.print(MOTOR_ENABLE,BYTE);
     Serial.print(MIN_THROTTLE / 4,BYTE);
@@ -294,9 +293,9 @@ void triGUI(){
     Serial.print((int)(Kp * 25),BYTE);
     Serial.print((int)(Ki * 1000),BYTE);
     Serial.print((int)(Kd * 100),BYTE);
-    
+    */
     //--------- Data --------------
-    Serial.print(millis() / 10000,BYTE); //time 0 - ca 45 min
+    /*Serial.print(millis() / 10000,BYTE); //time 0 - ca 45 min
     Serial.print(((receiver.getThro() > MIN_THROTTLE)? 0x30 : 0x20), BYTE);
     Serial.print(((receiver.getFlap() < RXCENTER) ? 0x00: 0x10), BYTE);
    
@@ -318,7 +317,8 @@ void triGUI(){
     Serial.print(receiver.getRudd() / 4,BYTE);
     Serial.print(receiver.getThro() / 4,BYTE);
     Serial.print(receiver.getElev() / 4,BYTE);
-    Serial.print(receiver.getAile() / 4,BYTE);
+    Se
+    rial.print(receiver.getAile() / 4,BYTE);
     Serial.print(map(yawPos, 0, 179, 0, 255),BYTE);
     Serial.print(map(leftThrust, 0, 179, 0, 255),BYTE);
     Serial.print(map(rearThrust, 0, 179, 0, 255),BYTE);
@@ -340,7 +340,7 @@ void triGUI(){
     Serial.print(0,BYTE);
     Serial.print(0,BYTE);
     */
-  }
+  /*}
   
   //PID param trim
   //This can be used to trim PID params. (Setpoints (Se fast_loop) to PID must be set static (511) before enabeling this)
@@ -361,13 +361,14 @@ void triGUI(){
   Serial.print("Kd: ");
   Serial.print(Kd);
   Serial.print("\t");*/
-}
+/*}
 
 /**
  * Transfere attitude data compatible with Happy Killmore ground station
  * 
  * Only if HK_ENABLED = 1
  */
+ /*
 void send_attitude(){
   if(HK_ENABLED == 1){
     Serial.print("+++"); //Prefix
@@ -388,6 +389,7 @@ void send_attitude(){
  * 
  * Only if HK_ENABLED = 1
  */
+ /*
 void send_location(){
   if(HK_ENABLED == 1){
     Serial.print("!!!"); //Prefix
@@ -418,15 +420,18 @@ void send_location(){
 }
 
 
-
+*/
 //TODO: Switch to PIDLibrary
+int integrated_error = 0;
+int last_error = 0;
+
 int updatePid(int targetPosition, int currentPosition)   {
   int error = targetPosition - currentPosition;
-  int pTerm = Kp * error;
+  int pTerm = (float)config[CV_PID_KP_BYTE] / 25 * error;
   integrated_error += error; 
   integrated_error = constrain(integrated_error, -10000, 10000);  
-  int iTerm = Ki * integrated_error;
-  int dTerm = Kd * (error - last_error);                            
+  int iTerm = (float)config[CV_PID_KI_BYTE] / 255 * integrated_error;
+  int dTerm = (float)config[CV_PID_KD_BYTE] / 50 * (error - last_error);                            
   last_error = error;
   
   //Uncomment to debug
@@ -440,7 +445,7 @@ int updatePid(int targetPosition, int currentPosition)   {
   Serial.println("\t");*/
   
   
-  return constrain(K*(pTerm + iTerm + dTerm), -1023, 1023);
+  return constrain(1*(pTerm + iTerm + dTerm), -1023, 1023);
 }
 
 /**
@@ -449,7 +454,7 @@ int updatePid(int targetPosition, int currentPosition)   {
  * @param int roll Desired roll torque (-1023 <  > 1023)
  * @param int nick Desired nick torque (-1023 <  > 1023)
  * @param int yaw Desired yaw torque (-1023 <  > 1023)
- */
+ *//*
 void setThrust(int throttle, int roll, int nick, int yaw ){ 
   
   // 1/2 nick on left 1/2 on right = 1 total front
@@ -497,6 +502,6 @@ void setThrust(int throttle, int roll, int nick, int yaw ){
   Serial.print("Yaw: ");
   Serial.print(yawVal);
   Serial.println("\t");*/
-}
-
+/*}
+*/
 

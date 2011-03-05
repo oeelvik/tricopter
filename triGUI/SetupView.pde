@@ -9,6 +9,7 @@ int sv_y;
 int sv_width;
 int sv_height;
 
+
 DropdownList sv_selectSerial;
 DropdownList sv_selectSerialBaud;
 
@@ -66,10 +67,10 @@ void createSetupView(int x, int y, int width, int height){
   sv_PIDEnable.setColorActive(color(0,255,0));
   sv_PIDEnable.setLabelVisible(false);
   
-  sv_minThrottle = controlP5.addSlider("setMinThrottle",0,1023,0,x+5,y+80,100,10);
+  sv_minThrottle = controlP5.addSlider("setMinThrottle",0,255,0,x+5,y+80,100,10);
   sv_minThrottle.setLabel("Minimum Throttle Value");
   
-  sv_minESC = controlP5.addSlider("setMinESC",0,1024,0,x+5,y+95,100,10);
+  sv_minESC = controlP5.addSlider("setMinESC",0,255,0,x+5,y+95,100,10);
   sv_minESC.setLabel("ESC Arm Value");
   
   sv_PIDSampleTime = controlP5.addSlider("setPIDSampleTime",0,255,0,x+5,y+140,100,10);
@@ -85,6 +86,8 @@ void createSetupView(int x, int y, int width, int height){
   sv_PIDKd.setLabel("PID derivative gain");
   
   sv_createSerialUI(x,y);
+  
+  controlP5.addButton("Send Config",0,x + 325,y + 5,70,20);
 }
 
 void sv_createSerialUI(int x, int y){
@@ -108,43 +111,55 @@ void sv_createSerialUI(int x, int y){
 }
 
 void enableMotors(boolean theFlag) {
-  gui.tricopter.enableMotors = theFlag;
+  gui.tricopter.config.data[CV_TRICOPTER_ENABLE_BYTE] = 
+    bitWrite(gui.tricopter.config.data[CV_TRICOPTER_ENABLE_BYTE]
+             ,CV_MOTORS_ENABLE_BIT
+             ,theFlag);
 }
 
 void setMinThrottle(int val) {
-  gui.tricopter.minThrottle = val;
+  gui.tricopter.config.data[CV_MIN_THRO_BYTE] = val;
 }
 
 void setMinESC(int val) {
-  gui.tricopter.minESC = val;
+  gui.tricopter.config.data[CV_MIN_ESC_BYTE] = val;
 }
 
 void setPIDSampleTime(int val) {
-  gui.tricopter.PIDSampleTime = val;
+  gui.tricopter.config.data[CV_PID_SAMPLE_TIME_BYTE] = val;
 }
 
 void setPIDKp(int val) {
-  gui.tricopter.PIDKp = val;
+  gui.tricopter.config.data[CV_PID_KP_BYTE] = val;
 }
 
 void setPIDKi(int val) {
-  gui.tricopter.PIDKi = val;
+  gui.tricopter.config.data[CV_PID_KI_BYTE] = val;
 }
 
 void setPIDKd(int val) {
-  gui.tricopter.PIDKd = val;
+  gui.tricopter.config.data[CV_PID_KD_BYTE] = val;
 }
 
 void enableHK(boolean theFlag) {
-  gui.tricopter.HKEnable = theFlag;
+  gui.tricopter.config.data[CV_TRICOPTER_ENABLE_BYTE] = 
+    bitWrite(gui.tricopter.config.data[CV_TRICOPTER_ENABLE_BYTE]
+             ,CV_HK_ENABLE_BIT
+             ,theFlag);
 }
 
 void enableTriGUI(boolean theFlag) {
-  gui.tricopter.TriGUITransmitt = theFlag;
+  gui.tricopter.config.data[CV_TRICOPTER_ENABLE_BYTE] = 
+    bitWrite(gui.tricopter.config.data[CV_TRICOPTER_ENABLE_BYTE]
+             ,CV_TRIGUI_ENABLE_BIT
+             ,theFlag);
 }
 
 void enablePID(boolean theFlag) {
-  gui.tricopter.PIDEnable = theFlag;
+  gui.tricopter.config.data[CV_TRICOPTER_ENABLE_BYTE] = 
+    bitWrite(gui.tricopter.config.data[CV_TRICOPTER_ENABLE_BYTE]
+             ,CV_PID_ENABLE_BIT
+             ,theFlag);
 }
 
 void updateSetupView(){
@@ -153,17 +168,20 @@ void updateSetupView(){
   fill(0);
   rect(sv_x, sv_y, sv_width, sv_height);
   
-  if(sv_motorsEnable != null) sv_motorsEnable.setValue(gui.tricopter.enableMotors);
-  if(sv_PIDEnable != null) sv_PIDEnable.setValue(gui.tricopter.PIDEnable);
-  if(sv_HKEnable != null) sv_HKEnable.setValue(gui.tricopter.HKEnable);
-  if(sv_TriGUIEnable != null) sv_TriGUIEnable.setValue(gui.tricopter.TriGUITransmitt);
-  if(sv_minThrottle != null) sv_minThrottle.setValue(gui.tricopter.minThrottle);
-  if(sv_minESC != null) sv_minESC.setValue(gui.tricopter.minESC);
-  if(sv_PIDSampleTime != null) sv_PIDSampleTime.setValue(gui.tricopter.PIDSampleTime);
-  if(sv_PIDKp != null) sv_PIDKp.setValue(gui.tricopter.PIDKp);
-  if(sv_PIDKi != null) sv_PIDKi.setValue(gui.tricopter.PIDKi);
-  if(sv_PIDKd != null) sv_PIDKd.setValue(gui.tricopter.PIDKd);
-  
+  if(gui != null && !gui.tricopter.config.loadedToGUI){
+    
+    gui.tricopter.config.loadedToGUI = true;
+    if(sv_motorsEnable != null) sv_motorsEnable.setValue(bitRead(gui.tricopter.config.data[CV_TRICOPTER_ENABLE_BYTE], CV_MOTORS_ENABLE_BIT));
+    if(sv_PIDEnable != null) sv_PIDEnable.setValue(bitRead(gui.tricopter.config.data[CV_TRICOPTER_ENABLE_BYTE], CV_PID_ENABLE_BIT));
+    if(sv_HKEnable != null) sv_HKEnable.setValue(bitRead(gui.tricopter.config.data[CV_TRICOPTER_ENABLE_BYTE], CV_HK_ENABLE_BIT));
+    if(sv_TriGUIEnable != null) sv_TriGUIEnable.setValue(bitRead(gui.tricopter.config.data[CV_TRICOPTER_ENABLE_BYTE], CV_TRIGUI_ENABLE_BIT));
+    if(sv_minThrottle != null) sv_minThrottle.setValue(gui.tricopter.config.data[CV_MIN_THRO_BYTE]);
+    if(sv_minESC != null) sv_minESC.setValue(gui.tricopter.config.data[CV_MIN_ESC_BYTE]);
+    if(sv_PIDSampleTime != null) sv_PIDSampleTime.setValue(gui.tricopter.config.data[CV_PID_SAMPLE_TIME_BYTE]);
+    if(sv_PIDKp != null) sv_PIDKp.setValue(gui.tricopter.config.data[CV_PID_KP_BYTE]);
+    if(sv_PIDKi != null) sv_PIDKi.setValue(gui.tricopter.config.data[CV_PID_KI_BYTE]);
+    if(sv_PIDKd != null) sv_PIDKd.setValue(gui.tricopter.config.data[CV_PID_KD_BYTE]);
+  }
 }
 
 void sv_updateSelectSerial(){
@@ -172,6 +190,8 @@ void sv_updateSelectSerial(){
 }
 
 void controlEvent(ControlEvent theEvent) {
+  
+  if(gui != null)
   // PulldownMenu is if type ControlGroup.
   // A controlEvent will be triggered from within the ControlGroup.
   // therefore you need to check the originator of the Event with
@@ -180,16 +200,21 @@ void controlEvent(ControlEvent theEvent) {
 
   if (theEvent.isGroup()) {
     // check if the Event was triggered from a ControlGroup
-    println(theEvent.group().value()+" from "+theEvent.group());
+    //println(theEvent.group().value()+" from "+theEvent.group());
     
     
   } else if(theEvent.isController()) {
-    println(theEvent.controller().value()+" from "+theEvent.controller());
+    //println(theEvent.controller().value()+" from "+theEvent.controller());
     
     
     //Update Serial Port select
     if(theEvent.name() == "Update List"){
       sv_updateSelectSerial();
+    }
+    
+    //Update Serial Port select
+    if(theEvent.name() == "Send Config"){
+      gui.serialHandler.send(6);
     }
     
     //Start Serial communication on buttonClick
@@ -207,9 +232,9 @@ void controlEvent(ControlEvent theEvent) {
       
       if(name != "Serial Port"){
         int val = (int)sv_selectSerialBaud.value();
-        if(val < 1) val = 115200; 
-        print(val);
+        if(val < 1) val = 115200;
         serial = new Serial(this, name, val);
+        gui.serialHandler.setSerial(serial);
       }
     }
   }
@@ -233,6 +258,5 @@ class ToggleDisplay implements ControllerDisplay{
     fill(255);
     textAlign(LEFT,CENTER);
     p.text(t.label(), t.getWidth() + 2, t.getHeight()/2);
-    
   }
 }
