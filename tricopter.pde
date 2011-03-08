@@ -9,6 +9,7 @@
 #include <IMU.h>
 #include <EEPROM.h>
 #include <NewSoftSerial.h>
+#include <PID_Beta6.h>
 
 
 #include "ConfigAdressing.cpp"
@@ -47,6 +48,14 @@ int rollForce = 0;
 int nickForce = 0;
 int yawForce = 0;
 
+//---------- PID --------------
+double rollSetpoint, rollInput, rollOutput;
+double nickSetpoint, nickInput, nickOutput;
+double yawSetpoint, yawInput, yawOutput;
+
+PID rollPID(&rollInput, &rollOutput, &rollSetpoint,2,5,1);
+PID nickPID(&nickInput, &nickOutput, &nickSetpoint,2,5,1);
+PID yawPID(&yawInput, &yawOutput, &yawSetpoint,2,5,1);
 
 //----------- Configuration --------------
 int config[CV_END_BYTE + 1];
@@ -67,14 +76,18 @@ void setup(){
   readEEPROMConfig();
   
   reloade();
+  
+  rollPID.SetOutputLimits(-1023,1023);
+  nickPID.SetOutputLimits(-1023,1023);
+  yawPID.SetOutputLimits(-1023,1023);
 }
 
 void reloade(){
   TriGUIsendMessage(TRIGUI_MESSAGE_TYPE_INFO,"Setting configuration");
   
-  //TODO: setup receiver reversing
-  
-  TriGUIsendMessage(0, config[CV_IMU_GYRO_ROLL_PIN_BYTE]);
+  //setup receiver reversing
+  int reversing = config[CV_RX_REVERSING_BYTE]; 
+  receiver.setReversing( (bitRead(reversing,CV_RX_THRO_REV_BIT )==1), (bitRead(reversing,CV_RX_AILE_REV_BIT )==1), (bitRead(reversing,CV_RX_ELEV_REV_BIT )==1), (bitRead(reversing,CV_RX_RUDD_REV_BIT )==1), (bitRead(reversing,CV_RX_GEAR_REV_BIT )==1), (bitRead(reversing,CV_RX_FLAP_REV_BIT )==1));
   
   //Setup IMU
   float gyro_scale = 11.044;//(1024/360)/1024 * 3,3/0,00083 (0,83mv/deg/sec)
@@ -84,14 +97,42 @@ void reloade(){
   imu.setAccGain((float)config[CV_IMU_ACC_GAIN_BYTE] / 100);
   imu.setAccTrim((config[CV_IMU_ACC_ROLL_TRIM_BYTE] * 4) - 511, (config[CV_IMU_ACC_NICK_TRIM_BYTE] * 4) - 511, (config[CV_IMU_ACC_VERT_TRIM_BYTE] * 4) - 511);
   imu.setPins(config[CV_IMU_GYRO_ROLL_PIN_BYTE], config[CV_IMU_GYRO_NICK_PIN_BYTE], config[CV_IMU_GYRO_YAW_PIN_BYTE], config[CV_IMU_ACC_ROLL_PIN_BYTE], config[CV_IMU_ACC_NICK_PIN_BYTE], config[CV_IMU_ACC_VERT_PIN_BYTE]);
-  int reversing = config[CV_IMU_REVERSING_BYTE]; 
+  reversing = config[CV_IMU_REVERSING_BYTE]; 
   imu.setReversing( (bitRead(reversing,CV_IMU_GYRO_ROLL_REV_BIT )==1), (bitRead(reversing,CV_IMU_GYRO_NICK_REV_BIT )==1), (bitRead(reversing,CV_IMU_GYRO_YAW_REV_BIT )==1), (bitRead(reversing,CV_IMU_ACC_ROLL_REV_BIT )==1), (bitRead(reversing,CV_IMU_ACC_NICK_REV_BIT )==1), (bitRead(reversing,CV_IMU_ACC_VERT_REV_BIT )==1) );
   imu.calibrateGyro();
   
   //Setup Mixer
   mix.setMinESC(map(config[CV_MIN_ESC_BYTE], 0, 255, 0, 179));
+  mix.setMinThro(map(config[CV_MIN_THRO_BYTE], 0, 255, 0, 1023));
   mix.setMotorsEnabled((bitRead(config[CV_TRICOPTER_ENABLE_BYTE], CV_MOTORS_ENABLE_BIT) == 1));
   mix.setPins(config[CV_LEFT_MOTOR_PIN_BYTE], config[CV_RIGHT_MOTOR_PIN_BYTE], config[CV_REAR_MOTOR_PIN_BYTE], config[CV_YAW_SERVO_PIN_BYTE]);
+  
+  //Setup PID
+  int mode = (bitRead(config[CV_TRICOPTER_ENABLE_BYTE], CV_PID_ENABLE_BIT) == 1) ? AUTO : MANUAL;
+  rollPID.SetMode(mode);
+  nickPID.SetMode(mode);
+  yawPID.SetMode(mode);
+  
+  rollPID.SetSampleTime(config[CV_PID_SAMPLE_TIME_BYTE]);
+  nickPID.SetSampleTime(config[CV_PID_SAMPLE_TIME_BYTE]);
+  yawPID.SetSampleTime(config[CV_PID_SAMPLE_TIME_BYTE]);
+  
+  /*TriGUIsendMessage(0, "-----------");
+  TriGUIsendMessage(0,(int)rollPID.GetP_Param());
+  TriGUIsendMessage(0,(int)rollPID.GetI_Param());
+  TriGUIsendMessage(0,(int)rollPID.GetD_Param());
+  TriGUIsendMessage(0, "-----------");
+  /*TriGUIsendMessage(0, (int)(float)config[CV_PID_KP_BYTE] / 10);
+  TriGUIsendMessage(0, (int)(float)config[CV_PID_KI_BYTE] / 10);
+  TriGUIsendMessage(0, (int)(float)config[CV_PID_KD_BYTE] / 10);
+  */
+  
+  TriGUIsendMessage(0, (int)(float)config[CV_PID_KP_BYTE] / 10);
+  
+  //TODO: enable d term and find bug
+  rollPID.SetTunings((float)config[CV_PID_KP_BYTE] / 10, (float)config[CV_PID_KI_BYTE] / 10, 0);//(float)config[CV_PID_KD_BYTE] / 10);
+  nickPID.SetTunings((float)config[CV_PID_KP_BYTE] / 10, (float)config[CV_PID_KI_BYTE] / 10, 0);//(float)config[CV_PID_KD_BYTE] / 10);
+  yawPID.SetTunings((float)config[CV_PID_KP_BYTE] / 10, (float)config[CV_PID_KI_BYTE] / 10, 0);//(float)config[CV_PID_KD_BYTE] / 10);
 }
 
 void loop(){
@@ -135,24 +176,44 @@ void fastLoop(){
     throttle = receiver.getThro();
     
     if(receiver.getFlap() < RXCENTER){ //Hover Mode (IMU stabled)
+      rollInput = imu.getRoll();
+      nickInput = imu.getNick();
+      yawInput = imu.getGyroYaw() + 511;
+      
+      rollSetpoint = receiver.getAile();
+      nickSetpoint = receiver.getElev();
+      yawSetpoint = receiver.getRudd();
+      //Output = Output;
       //TODO: Switch to PIDLibrary
-      rollForce = updatePid(receiver.getAile(), imu.getRoll());
+      //rollForce = updatePid(receiver.getAile(), imu.getRoll());
       //nickForce = updatePid(receiver.getElev(), imu.getNick());
       //yawForce = updatePid(receiver.getRudd(), imu.getGyroYaw() + 511); //Uses the derivated version (Gyro signal)
     } else { //Stunt Mode (Gyro stabled)
+      //TODO: use gyro signal
+      
+      rollInput = imu.getGyroRoll() + 511;
+      nickInput = imu.getGyroNick() + 511;
+      yawInput = imu.getGyroYaw() + 511;
+      
+      rollSetpoint = receiver.getAile();
+      nickSetpoint = receiver.getElev();
+      yawSetpoint = receiver.getRudd();
       //TODO: Switch to PIDLibrary
       //Gyro signal / 2 to increase max speed to 2 * 360 degree / sec
-      rollForce = updatePid(receiver.getAile(), constrain((imu.getGyroRoll() / 2) + 511, 0, 1023));
+      //rollForce = updatePid(receiver.getAile(), constrain((imu.getGyroRoll() / 2) + 511, 0, 1023));
       //nickForce = updatePid(receiver.getElev(), constrain((imu.getGyroNick() / 2) + 511, 0, 1023));
       //yawForce = updatePid(receiver.getRudd(), constrain((imu.getGyroYaw() / 2) + 511, 0, 1023));
     }
     
-  } else {
-      throttle = 0;
-      rollForce = 0;
-      nickForce = 0;
-      yawForce = 0;
     
+    rollPID.Compute();
+    nickPID.Compute();
+    yawPID.Compute();
+    
+  } else {
+    rollPID.Reset();
+    nickPID.Reset();
+    yawPID.Reset();
     //TODO: Reset PID terms
   }
   
@@ -160,7 +221,7 @@ void fastLoop(){
   //Manual mode (Only for debug purpose)
   //setThrust(receiver.getThro(), receiver.getAile(), receiver.getElev(), receiver.getYaw());
   
-  mix.setThrust(throttle, rollForce, nickForce, yawForce);
+  mix.setThrust(receiver.getThro(), rollOutput, nickOutput, yawOutput);
 }
 
 /**
@@ -175,6 +236,10 @@ void fastLoop(){
  */
  
 void mediumLoop(){
+  
+  /*Serial.print(Input);
+  Serial.print(":");
+  Serial.println((Output + 1023) / 8, BYTE);*/
   //Each case at 10Hz
   switch(mediumLoopCount) {
     case 0:
@@ -185,10 +250,10 @@ void mediumLoop(){
       break;
     case 2:
       TriGUIsendIMU();
-      //send_location();
+      HappyKillmoreSendAttitude();
       break;
     case 3:
-      //send_attitude();
+      HappyKillmoreSendLocation();
       break;
     case 4:
       mediumLoopCount = -1;

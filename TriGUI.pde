@@ -13,9 +13,10 @@ void TriGUIsendConfig(){
   Serial.println("***"); //Suffix
   TriGUIsendMessage(0, "Configuration sendt form tricopter");
 }
-
+s
 void TriGUIsendCopter(){
-  //Tricopter
+  if(bitRead(config[CV_TRICOPTER_ENABLE_BYTE], CV_TRIGUI_ENABLE_BIT) == 1){
+    //Tricopter
     Serial.print(">>>"); //Prefix
     Serial.print(2, BYTE); //CMD Tricopter
     
@@ -31,46 +32,49 @@ void TriGUIsendCopter(){
     Serial.print(map(mix.getYawPos(), 0, 179, 0, 255),BYTE);
     
     //PID
-    Serial.print((rollForce + 1023) / 8,BYTE);
-    Serial.print((nickForce + 1023) / 8,BYTE);
-    Serial.print((yawForce + 1023) / 8,BYTE);
+    Serial.print(((int)rollOutput + 1023) / 8,BYTE);
+    Serial.print(((int)nickOutput + 1023) / 8,BYTE);
+    Serial.print(((int)yawOutput + 1023) / 8,BYTE);
     
     Serial.println("***"); //Suffix
-    
+  }
 }
 
 void TriGUIsendReceiver(){
-  Serial.print(">>>"); //Prefix
-  Serial.print(3,BYTE); //CMD receiver
-  
-  //Signal
-  Serial.print(receiver.getThro() / 4,BYTE);
-  Serial.print(receiver.getAile() / 4,BYTE);
-  Serial.print(receiver.getElev() / 4,BYTE);
-  Serial.print(receiver.getRudd() / 4,BYTE);
-  Serial.print(receiver.getGear() / 4,BYTE);
-  Serial.print(receiver.getFlap() / 4,BYTE);
-  
-  Serial.println("***"); //Suffix
+  if(bitRead(config[CV_TRICOPTER_ENABLE_BYTE], CV_TRIGUI_ENABLE_BIT) == 1){
+    Serial.print(">>>"); //Prefix
+    Serial.print(3,BYTE); //CMD receiver
     
+    //Signal
+    Serial.print(receiver.getThro() / 4,BYTE);
+    Serial.print(receiver.getAile() / 4,BYTE);
+    Serial.print(receiver.getElev() / 4,BYTE);
+    Serial.print(receiver.getRudd() / 4,BYTE);
+    Serial.print(receiver.getGear() / 4,BYTE);
+    Serial.print(receiver.getFlap() / 4,BYTE);
+    
+    Serial.println("***"); //Suffix
+  }
 }
 
 void TriGUIsendIMU(){
-  Serial.print(">>>"); //Prefix
-  Serial.print(4,BYTE); //CMD IMU
-  
-  //Signal
-  Serial.print(imu.getRoll() / 4,BYTE);
-  Serial.print(imu.getNick() / 4,BYTE);
-  Serial.print(imu.getYaw() / 4,BYTE);
-  
-  Serial.print(imu.getGyroRoll() / 8 + 127,BYTE);
-  Serial.print(imu.getGyroNick() / 8 + 127,BYTE);
-  Serial.print(imu.getGyroYaw() / 8 + 127,BYTE);
-  
-  Serial.print(imu.getAccRoll() / 4,BYTE);
-  Serial.print(imu.getAccNick() / 4,BYTE);
-  Serial.print(0,BYTE); // AccVert //TODO: not implemented in IMU class
-  
-  Serial.println("***"); //Suffix
+  if(bitRead(config[CV_TRICOPTER_ENABLE_BYTE], CV_TRIGUI_ENABLE_BIT) == 1){
+    Serial.print(">>>"); //Prefix
+    Serial.print(4,BYTE); //CMD IMU
+    
+    //Signal
+    Serial.print(imu.getRoll() / 4,BYTE);
+    Serial.print(imu.getNick() / 4,BYTE);
+    Serial.print(imu.getYaw() / 4,BYTE);
+    
+    Serial.print(imu.getGyroRoll() / 8 + 127,BYTE);
+    Serial.print(imu.getGyroNick() / 8 + 127,BYTE);
+    Serial.print(imu.getGyroYaw() / 8 + 127,BYTE);
+    
+    Serial.print(imu.getAccRoll() / 4,BYTE);
+    Serial.print(imu.getAccNick() / 4,BYTE);
+    Serial.print(0,BYTE); // AccVert //TODO: not implemented in IMU class
+    
+    Serial.println("***"); //Suffix
+  }
 }

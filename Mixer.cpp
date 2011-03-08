@@ -7,6 +7,9 @@ Mixer::Mixer(){}
 void Mixer::setMinESC(int val){
   minESC = val;
 }
+void Mixer::setMinThro(int val){
+  minThro = val;
+}
 void Mixer::setMotorsEnabled(bool val){
   motorsEnabled = val;
 }
@@ -28,7 +31,7 @@ void Mixer::setPins(int left, int right, int rear, int yaw){
  * @param int nick Desired nick torque (-1023 <  > 1023)
  * @param int yaw Desired yaw torque (-1023 <  > 1023)
  */
-void Mixer::setThrust(int throttle, int roll, int nick, int yaw ){ 
+void Mixer::setThrust(int throttle, int roll, int nick, int yaw ){
   
   // 1/2 nick on left 1/2 on right = 1 total front
   leftThrust = constrain(map(throttle + roll + (nick / 2), 0, 1024, 0, 179), minESC, 179);
@@ -40,6 +43,14 @@ void Mixer::setThrust(int throttle, int roll, int nick, int yaw ){
   
   //yaw servo angle
   yawPos = constrain(map(yaw, -1023, 1023, 0, 179), 0, 179);
+  
+  if(throttle < minThro){
+    leftThrust = 0;
+    rightThrust = 0;
+    rearThrust = 0;
+    yawPos = 90;
+  }
+    
   
   if(motorsEnabled){
     leftMotor.write(leftThrust);

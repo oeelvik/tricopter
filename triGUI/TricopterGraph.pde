@@ -117,8 +117,9 @@ class TricopterGraph {
   //TODO: fix this
   void setYaw(int value, int setPoint) {
 
-    value = -(int)map(value, minValue, maxValue, -_width / 2, _width / 2);
-    setPoint = -(int)map(setPoint, minValue, maxValue, -_width / 2, _width / 2);
+    value = (int)map(value, minValue, maxValue, -_width / 2, _width / 2);
+    setPoint = 
+    (int)map(setPoint, minValue, maxValue, -_width / 2, _width / 2);
 
     int x = _x + _width / 2;
     int y = (int)(_y + _height / 1.43 + _rotorD/2 + 5);
