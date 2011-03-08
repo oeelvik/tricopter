@@ -1,6 +1,3 @@
-//TODO: create HappyKillmore methods
-//TODO: enable turning on of serial coms
-//TODO: Change to PIDLibrary
 //TODO: Use software serial for communication with the compeuter
 //TODO: 
 
@@ -108,28 +105,6 @@ void reloade(){
   mix.setPins(config[CV_LEFT_MOTOR_PIN_BYTE], config[CV_RIGHT_MOTOR_PIN_BYTE], config[CV_REAR_MOTOR_PIN_BYTE], config[CV_YAW_SERVO_PIN_BYTE]);
   
   //Setup PID
-  /*int mode = (bitRead(config[CV_TRICOPTER_ENABLE_BYTE], CV_PID_ENABLE_BIT) == 1) ? AUTO : MANUAL;
-  rollPID.SetMode(mode);
-  nickPID.SetMode(mode);
-  yawPID.SetMode(mode);
-  
-  rollPID.SetSampleTime(config[CV_PID_SAMPLE_TIME_BYTE]);
-  nickPID.SetSampleTime(config[CV_PID_SAMPLE_TIME_BYTE]);
-  yawPID.SetSampleTime(config[CV_PID_SAMPLE_TIME_BYTE]);
-  */
-  /*TriGUIsendMessage(0, "-----------");
-  TriGUIsendMessage(0,(int)rollPID.GetP_Param());
-  TriGUIsendMessage(0,(int)rollPID.GetI_Param());
-  TriGUIsendMessage(0,(int)rollPID.GetD_Param());
-  TriGUIsendMessage(0, "-----------");
-  /*TriGUIsendMessage(0, (int)(float)config[CV_PID_KP_BYTE] / 10);
-  TriGUIsendMessage(0, (int)(float)config[CV_PID_KI_BYTE] / 10);
-  TriGUIsendMessage(0, (int)(float)config[CV_PID_KD_BYTE] / 10);
-  */
-  
-  TriGUIsendMessage(0, (int)(float)config[CV_PID_KP_BYTE] / 25);
-  
-  //TODO: enable d term and find bug
   rollPID.setTunings((float)config[CV_PID_KP_BYTE] / 25, (float)config[CV_PID_KI_BYTE] / 255, (float)config[CV_PID_KD_BYTE] / 25);
   nickPID.setTunings((float)config[CV_PID_KP_BYTE] / 25, (float)config[CV_PID_KI_BYTE] / 255, (float)config[CV_PID_KD_BYTE] / 25);
   yawPID.setTunings((float)config[CV_PID_KP_BYTE] / 25, (float)config[CV_PID_KI_BYTE] / 255, (float)config[CV_PID_KD_BYTE] / 25);
@@ -181,38 +156,16 @@ void fastLoop(){
       nickOutput = nickPID.updatePid(receiver.getElev(), imu.getNick());
       yawOutput = yawPID.updatePid(receiver.getRudd(), imu.getGyroYaw() + 511);
       
-      //Output = Output;
-      //TODO: Switch to PIDLibrary
-      //rollForce = updatePid(receiver.getAile(), imu.getRoll());
-      //nickForce = updatePid(receiver.getElev(), imu.getNick());
-      //yawForce = updatePid(receiver.getRudd(), imu.getGyroYaw() + 511); //Uses the derivated version (Gyro signal)
+      
     } else { //Stunt Mode (Gyro stabled)
-      //TODO: use gyro signal
-      
-      /*rollInput = imu.getGyroRoll() + 511;
-      nickInput = imu.getGyroNick() + 511;
-      yawInput = imu.getGyroYaw() + 511;
-      
-      rollSetpoint = receiver.getAile();
-      nickSetpoint = receiver.getElev();
-      yawSetpoint = receiver.getRudd();*/
-      //TODO: Switch to PIDLibrary
-      //Gyro signal / 2 to increase max speed to 2 * 360 degree / sec
-      //rollForce = updatePid(receiver.getAile(), constrain((imu.getGyroRoll() / 2) + 511, 0, 1023));
-      //nickForce = updatePid(receiver.getElev(), constrain((imu.getGyroNick() / 2) + 511, 0, 1023));
-      //yawForce = updatePid(receiver.getRudd(), constrain((imu.getGyroYaw() / 2) + 511, 0, 1023));
+      rollOutput = rollPID.updatePid(receiver.getAile(), imu.getGyroRoll() + 511);
+      nickOutput = nickPID.updatePid(receiver.getElev(), imu.getGyroNick() + 511);
+      yawOutput = yawPID.updatePid(receiver.getRudd(), imu.getGyroYaw() + 511);
     }
     
-  } else {
-    /*rollPID.Reset();
-    nickPID.Reset();
-    yawPID.Reset();*/
-    //TODO: Reset PID terms
   }
   
-  //TODO: implement manualMode as part of PIDLibrary
-  //Manual mode (Only for debug purpose)
-  //setThrust(receiver.getThro(), receiver.getAile(), receiver.getElev(), receiver.getYaw());
+  //TODO: Reset PID for roll and nick (yaw is the same in both modes) when switshing to new mode or use seperate PID objects for eact mode
   
   mix.setThrust(receiver.getThro(), rollOutput, nickOutput, yawOutput);
 }
@@ -229,10 +182,6 @@ void fastLoop(){
  */
  
 void mediumLoop(){
-  
-  /*Serial.print(Input);
-  Serial.print(":");
-  Serial.println((Output + 1023) / 8, BYTE);*/
   //Each case at 10Hz
   switch(mediumLoopCount) {
     case 0:
@@ -263,168 +212,3 @@ void mediumLoop(){
 void slowLoop(){
   
 }
-
-  
-  //PID param trim
-  //This can be used to trim PID params. (Setpoints (Se fast_loop) to PID must be set static (511) before enabeling this)
-  /*K = (float)(receiver.getElev() - 511)/10;
-  Kp = (float)(receiver.getRudd() - 511)/50;
-  Ki = (float)(receiver.getGear() - 870)/100;
-  Kd = (float)(receiver.getFlap() - 511)/50;
-  
-  Serial.print("K: ");
-  Serial.print(K);
-  Serial.print("\t");
-  Serial.print("Kp: ");
-  Serial.print(Kp);
-  Serial.print("\t");
-  Serial.print("Ki: ");
-  Serial.print(Ki);
-  Serial.print("\t");
-  Serial.print("Kd: ");
-  Serial.print(Kd);
-  Serial.print("\t");*/
-/*}
-
-/**
- * Transfere attitude data compatible with Happy Killmore ground station
- * 
- * Only if HK_ENABLED = 1
- */
- /*
-void send_attitude(){
-  if(HK_ENABLED == 1){
-    Serial.print("+++"); //Prefix
-    Serial.print("ASP:"); //Airspeed
-    Serial.print(20, DEC);
-    Serial.print(",THH:"); //Throttle
-    Serial.print(map(receiver.getThro(),153,862,0,100), DEC);
-    Serial.print (",RLL:"); //Roll
-    Serial.print(imu.getRollDegree());//(analogRead(ACC_ROLL_PIN) - init_acc_roll) * acc_scale, DEC);
-    Serial.print (",PCH:"); //Pitch
-    Serial.print(imu.getNickDegree());
-    Serial.println(",***"); //Suffix
-  }
-}
-
-/**
- * Transfere location data compatible with Happy Killmore ground station
- * 
- * Only if HK_ENABLED = 1
- */
- /*
-void send_location(){
-  if(HK_ENABLED == 1){
-    Serial.print("!!!"); //Prefix
-    Serial.print("LAT:"); //Latitude
-    Serial.print("67967300");//"33952600");
-    Serial.print(",LON:"); //Longitude
-    Serial.print("14994700");//"-117409072");
-    Serial.print(",SPD:"); //Speed over ground from GPS
-    Serial.print(30);
-    Serial.print(",CRT:"); //Climb rate m/s
-    Serial.print("100");
-    Serial.print(",ALT:"); //Altitude in meters
-    Serial.print(1000);
-    Serial.print(",ALH:"); //Target Altitude
-    Serial.print("450");
-    Serial.print(",CRS:"); //Course over ground in degrees
-    Serial.print(imu.getYawDegree()); 
-    Serial.print(",BER:"); //Bearing (target heading)
-    Serial.print("94");
-    Serial.print(",WPN:"); //Waypoint number
-    Serial.print("0");
-    Serial.print(",DST:"); //Distance from Waypoint
-    Serial.print("25853");
-    Serial.print(",BTV:"); //Battery voltage
-    Serial.print("11840");
-    Serial.println(",***"); //suffix
-  }
-}
-
-
-*/
-//TODO: Switch to PIDLibrary
-int integrated_error = 0;
-int last_error = 0;
-
-int updatePid(int targetPosition, int currentPosition)   {
-  int error = targetPosition - currentPosition;
-  int pTerm = (float)config[CV_PID_KP_BYTE] / 25 * error;
-  integrated_error += error; 
-  integrated_error = constrain(integrated_error, -10000, 10000);  
-  int iTerm = (float)config[CV_PID_KI_BYTE] / 255 * integrated_error;
-  int dTerm = (float)config[CV_PID_KD_BYTE] / 50 * (error - last_error);                            
-  last_error = error;
-  
-  //Uncomment to debug
-  /*Serial.print(pTerm);
-  Serial.print("\t");
-  Serial.print(iTerm);
-  Serial.print("\t");
-  Serial.print(dTerm);
-  Serial.print("\t");
-  Serial.print(-constrain(K*(pTerm + iTerm + dTerm), -1024, 1024));
-  Serial.println("\t");*/
-  
-  
-  return constrain(1*(pTerm + iTerm + dTerm), -1023, 1023);
-}
-
-/**
- * Update the motors thrust and servo angle based on desired forses
- * @param int throttle Desired throttle force (0-1023)
- * @param int roll Desired roll torque (-1023 <  > 1023)
- * @param int nick Desired nick torque (-1023 <  > 1023)
- * @param int yaw Desired yaw torque (-1023 <  > 1023)
- *//*
-void setThrust(int throttle, int roll, int nick, int yaw ){ 
-  
-  // 1/2 nick on left 1/2 on right = 1 total front
-  leftThrust = constrain(map(throttle + roll + (nick / 2), 0, 1024, 0, 179), MIN_ESC, 179);
-  rightThrust = constrain(map(throttle - roll + (nick / 2), 0, 1024, 0, 179), MIN_ESC, 179);
-  
-  //added yaw angle devided by some constant to compensate for vertical thrust loss
-  //TODO: adjust constant
-  rearThrust = constrain(map(throttle - nick + (abs(yaw) / 4), 0, 1024, 0, 179), MIN_ESC, 179);
-  
-  //yaw servo angle
-  yawPos = constrain(map(yaw, -1023, 1023, 0, 179), 0, 179);
-  
-  if(MOTOR_ENABLE == 1){
-    leftMotor.write(leftThrust);
-    rightMotor.write(rightThrust);
-    rearMotor.write(rearThrust);
-    yawServo.write(yawPos);
-  }
-  
-  //Uncomment to debug
-  /*Serial.print("Throttle: ");
-  Serial.print(throttle);
-  Serial.print("\t");
-  Serial.print("Roll: ");
-  Serial.print(roll);
-  Serial.print("\t");
-  Serial.print("Nick: ");
-  Serial.print(nick);
-  Serial.print("\t");
-  Serial.print("Yaw: ");
-  Serial.print(yaw);
-  Serial.print("\t");
-  Serial.print("\t");
-  Serial.print("\t");
-  Serial.print("Left: ");
-  Serial.print(left);
-  Serial.print("\t");
-  Serial.print("Right: ");
-  Serial.print(right);
-  Serial.print("\t");
-  Serial.print("Rear: ");
-  Serial.print(rear);
-  Serial.print("\t");
-  Serial.print("Yaw: ");
-  Serial.print(yawVal);
-  Serial.println("\t");*/
-/*}
-*/
-
