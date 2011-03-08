@@ -6,6 +6,9 @@ PID::PID(){
 }
 
 void PID::setTunings(double Kp, double Ki, double Kd){
+  //Scale Accumulated error to the new Tunings
+  _integratedError = _integratedError * _Ki / Ki;
+  
   _Kp = Kp;
   _Ki = Ki;
   _Kd = Kd;
