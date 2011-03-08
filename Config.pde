@@ -26,9 +26,9 @@ void resetConfig(){
   config[CV_MIN_THRO_BYTE] = 50; // minThro = val * 4
   config[CV_MIN_ESC_BYTE] = 7; // minESC = val * 1.416667 eller map(val, 0, 255, 0, 179)
   config[CV_PID_SAMPLE_TIME_BYTE] = 20; //Sampletime = val * 4 (0-1024 millis)
-  config[CV_PID_KP_BYTE] = 20; // Kp = var / 25 (0-10.2) 
-  config[CV_PID_KI_BYTE] = 50; //Ki = var / 255 (0-1)
-  config[CV_PID_KD_BYTE] = 10; //Kp = var / 50 (0-5.1)
+  config[CV_PID_KP_BYTE] = 25; // Kp = var / 25 (0-10.2) 
+  config[CV_PID_KI_BYTE] = 12; //Ki = var / 255 (0-1)
+  config[CV_PID_KD_BYTE] = 40; //Kp = var / 25 (0-10.2)
   
   //------ Receiver ---------
   config[CV_RX_REVERSING_BYTE] = 12;

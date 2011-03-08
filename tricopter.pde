@@ -9,11 +9,11 @@
 #include <IMU.h>
 #include <EEPROM.h>
 #include <NewSoftSerial.h>
-#include <PID_Beta6.h>
 
 
 #include "ConfigAdressing.cpp"
 #include "Mixer.h"
+#include "PID.h"
 
 
 #define RESET_CONFIG 1 //Set to 1 to loade default config and save it to eeprom
@@ -49,13 +49,13 @@ int nickForce = 0;
 int yawForce = 0;
 
 //---------- PID --------------
-double rollSetpoint, rollInput, rollOutput;
-double nickSetpoint, nickInput, nickOutput;
-double yawSetpoint, yawInput, yawOutput;
+double rollOutput;
+double nickOutput;
+double yawOutput;
 
-PID rollPID(&rollInput, &rollOutput, &rollSetpoint,2,5,1);
-PID nickPID(&nickInput, &nickOutput, &nickSetpoint,2,5,1);
-PID yawPID(&yawInput, &yawOutput, &yawSetpoint,2,5,1);
+PID rollPID;
+PID nickPID;
+PID yawPID;
 
 //----------- Configuration --------------
 int config[CV_END_BYTE + 1];
@@ -77,9 +77,9 @@ void setup(){
   
   reloade();
   
-  rollPID.SetOutputLimits(-1023,1023);
-  nickPID.SetOutputLimits(-1023,1023);
-  yawPID.SetOutputLimits(-1023,1023);
+  rollPID.setOutputLimits(-1023,1023);
+  nickPID.setOutputLimits(-1023,1023);
+  yawPID.setOutputLimits(-1023,1023);
 }
 
 void reloade(){
@@ -108,7 +108,7 @@ void reloade(){
   mix.setPins(config[CV_LEFT_MOTOR_PIN_BYTE], config[CV_RIGHT_MOTOR_PIN_BYTE], config[CV_REAR_MOTOR_PIN_BYTE], config[CV_YAW_SERVO_PIN_BYTE]);
   
   //Setup PID
-  int mode = (bitRead(config[CV_TRICOPTER_ENABLE_BYTE], CV_PID_ENABLE_BIT) == 1) ? AUTO : MANUAL;
+  /*int mode = (bitRead(config[CV_TRICOPTER_ENABLE_BYTE], CV_PID_ENABLE_BIT) == 1) ? AUTO : MANUAL;
   rollPID.SetMode(mode);
   nickPID.SetMode(mode);
   yawPID.SetMode(mode);
@@ -116,7 +116,7 @@ void reloade(){
   rollPID.SetSampleTime(config[CV_PID_SAMPLE_TIME_BYTE]);
   nickPID.SetSampleTime(config[CV_PID_SAMPLE_TIME_BYTE]);
   yawPID.SetSampleTime(config[CV_PID_SAMPLE_TIME_BYTE]);
-  
+  */
   /*TriGUIsendMessage(0, "-----------");
   TriGUIsendMessage(0,(int)rollPID.GetP_Param());
   TriGUIsendMessage(0,(int)rollPID.GetI_Param());
@@ -127,12 +127,12 @@ void reloade(){
   TriGUIsendMessage(0, (int)(float)config[CV_PID_KD_BYTE] / 10);
   */
   
-  TriGUIsendMessage(0, (int)(float)config[CV_PID_KP_BYTE] / 10);
+  TriGUIsendMessage(0, (int)(float)config[CV_PID_KP_BYTE] / 25);
   
   //TODO: enable d term and find bug
-  rollPID.SetTunings((float)config[CV_PID_KP_BYTE] / 10, (float)config[CV_PID_KI_BYTE] / 10, 0);//(float)config[CV_PID_KD_BYTE] / 10);
-  nickPID.SetTunings((float)config[CV_PID_KP_BYTE] / 10, (float)config[CV_PID_KI_BYTE] / 10, 0);//(float)config[CV_PID_KD_BYTE] / 10);
-  yawPID.SetTunings((float)config[CV_PID_KP_BYTE] / 10, (float)config[CV_PID_KI_BYTE] / 10, 0);//(float)config[CV_PID_KD_BYTE] / 10);
+  rollPID.setTunings((float)config[CV_PID_KP_BYTE] / 25, (float)config[CV_PID_KI_BYTE] / 255, (float)config[CV_PID_KD_BYTE] / 25);
+  nickPID.setTunings((float)config[CV_PID_KP_BYTE] / 25, (float)config[CV_PID_KI_BYTE] / 255, (float)config[CV_PID_KD_BYTE] / 25);
+  yawPID.setTunings((float)config[CV_PID_KP_BYTE] / 25, (float)config[CV_PID_KI_BYTE] / 255, (float)config[CV_PID_KD_BYTE] / 25);
 }
 
 void loop(){
@@ -176,13 +176,11 @@ void fastLoop(){
     throttle = receiver.getThro();
     
     if(receiver.getFlap() < RXCENTER){ //Hover Mode (IMU stabled)
-      rollInput = imu.getRoll();
-      nickInput = imu.getNick();
-      yawInput = imu.getGyroYaw() + 511;
+    
+      rollOutput = rollPID.updatePid(receiver.getAile(), imu.getRoll());
+      nickOutput = nickPID.updatePid(receiver.getElev(), imu.getNick());
+      yawOutput = yawPID.updatePid(receiver.getRudd(), imu.getGyroYaw() + 511);
       
-      rollSetpoint = receiver.getAile();
-      nickSetpoint = receiver.getElev();
-      yawSetpoint = receiver.getRudd();
       //Output = Output;
       //TODO: Switch to PIDLibrary
       //rollForce = updatePid(receiver.getAile(), imu.getRoll());
@@ -191,13 +189,13 @@ void fastLoop(){
     } else { //Stunt Mode (Gyro stabled)
       //TODO: use gyro signal
       
-      rollInput = imu.getGyroRoll() + 511;
+      /*rollInput = imu.getGyroRoll() + 511;
       nickInput = imu.getGyroNick() + 511;
       yawInput = imu.getGyroYaw() + 511;
       
       rollSetpoint = receiver.getAile();
       nickSetpoint = receiver.getElev();
-      yawSetpoint = receiver.getRudd();
+      yawSetpoint = receiver.getRudd();*/
       //TODO: Switch to PIDLibrary
       //Gyro signal / 2 to increase max speed to 2 * 360 degree / sec
       //rollForce = updatePid(receiver.getAile(), constrain((imu.getGyroRoll() / 2) + 511, 0, 1023));
@@ -205,15 +203,10 @@ void fastLoop(){
       //yawForce = updatePid(receiver.getRudd(), constrain((imu.getGyroYaw() / 2) + 511, 0, 1023));
     }
     
-    
-    rollPID.Compute();
-    nickPID.Compute();
-    yawPID.Compute();
-    
   } else {
-    rollPID.Reset();
+    /*rollPID.Reset();
     nickPID.Reset();
-    yawPID.Reset();
+    yawPID.Reset();*/
     //TODO: Reset PID terms
   }
   
@@ -271,141 +264,6 @@ void slowLoop(){
   
 }
 
-
-
-/**
- * Communicate with config software
- */
-//TODO: implement GUI config tool
-/*
-void triGUI(){
-  if(TRIGUI_ENABLED){
-    //TODO: split in multiple functions and run in different medium_loop cases to spred load
-    //RECEIVER
-    Serial.print(">>>"); //Prefix
-    Serial.print(3,BYTE); //CMD receiver
-    
-    //Signal
-    Serial.print(receiver.getThro() / 4,BYTE);
-    Serial.print(receiver.getAile() / 4,BYTE);
-    Serial.print(receiver.getElev() / 4,BYTE);
-    Serial.print(receiver.getRudd() / 4,BYTE);
-    Serial.print(receiver.getGear() / 4,BYTE);
-    Serial.print(receiver.getFlap() / 4,BYTE);
-    
-    //Reversing
-    /*Serial.print(0,BYTE);
-    Serial.print(0,BYTE);
-    Serial.print(0,BYTE);
-    Serial.print(0,BYTE);
-    Serial.print(0,BYTE);
-    Serial.print(0,BYTE);
-    */
-  /*  Serial.println("***"); //Suffix
-    
-    //IMU
-    Serial.print(">>>"); //Prefix
-    Serial.print(5,BYTE); //CMD IMU
-    
-    //Signal
-    Serial.print(imu.getRoll() / 4,BYTE);
-    Serial.print(imu.getNick() / 4,BYTE);
-    Serial.print(imu.getYaw() / 4,BYTE);
-    
-    Serial.print(imu.getGyroRoll() / 4,BYTE);
-    Serial.print(imu.getGyroNick() / 4,BYTE);
-    Serial.print(imu.getGyroYaw() / 4,BYTE);
-    
-    Serial.print(imu.getAccRoll() / 4,BYTE);
-    Serial.print(imu.getAccNick() / 4,BYTE);
-    Serial.print(0,BYTE); // AccVert
-    
-    //Reversing
-    /*Serial.print(0,BYTE);
-    Serial.print(0,BYTE);
-    Serial.print(0,BYTE);
-    
-    Serial.print(0,BYTE);
-    Serial.print(0,BYTE);
-    Serial.print(0,BYTE);
-    
-    //Acc Trim
-    Serial.print(ACC_ROLL_TRIM,BYTE);
-    Serial.print(ACC_NICK_TRIM,BYTE);
-    Serial.print(ACC_VERT_TRIM,BYTE);
-    
-    //Gain
-    Serial.print(acc_gain,BYTE);
-    */
-    /*Serial.println("***"); //Suffix
-    
-    //Tricopter
-    Serial.print(">>>"); //Prefix
-    Serial.print(1, BYTE); //CMD Tricopter
-    /*
-    //------- Setup -------------
-    Serial.print(MOTOR_ENABLE,BYTE);
-    Serial.print(MIN_THROTTLE / 4,BYTE);
-    Serial.print(map(MIN_ESC, 0,179,0,1023),BYTE); //0-179
-    
-    //Serial communication
-    Serial.print(HK_ENABLED,BYTE);
-    Serial.print(TRIGUI_ENABLED,BYTE);
-    
-    //PID
-    Serial.print(1,BYTE);
-    Serial.print(0,BYTE);
-    Serial.print((int)(Kp * 25),BYTE);
-    Serial.print((int)(Ki * 1000),BYTE);
-    Serial.print((int)(Kd * 100),BYTE);
-    */
-    //--------- Data --------------
-    /*Serial.print(millis() / 10000,BYTE); //time 0 - ca 45 min
-    Serial.print(((receiver.getThro() > MIN_THROTTLE)? 0x30 : 0x20), BYTE);
-    Serial.print(((receiver.getFlap() < RXCENTER) ? 0x00: 0x10), BYTE);
-   
-    //Motors and servo
-    Serial.print(map(leftThrust, 0, 179, 0, 255),BYTE);
-    Serial.print(map(rightThrust, 0, 179, 0, 255),BYTE);
-    Serial.print(map(rearThrust, 0, 179, 0, 255),BYTE);
-    Serial.print(map(yawPos, 0, 179, 0, 255),BYTE);
-    
-    //PID
-    Serial.print((rollForce + 1023) / 8,BYTE);
-    Serial.print((nickForce + 1023) / 8,BYTE);
-    Serial.print((yawForce + 1023) / 8,BYTE);
-    
-    Serial.println("***"); //Suffix
-    
-    /*Serial.println();
-    
-    Serial.print(receiver.getRudd() / 4,BYTE);
-    Serial.print(receiver.getThro() / 4,BYTE);
-    Serial.print(receiver.getElev() / 4,BYTE);
-    Se
-    rial.print(receiver.getAile() / 4,BYTE);
-    Serial.print(map(yawPos, 0, 179, 0, 255),BYTE);
-    Serial.print(map(leftThrust, 0, 179, 0, 255),BYTE);
-    Serial.print(map(rearThrust, 0, 179, 0, 255),BYTE);
-    Serial.print(map(rightThrust, 0, 179, 0, 255),BYTE);
-    
-    Serial.print(receiver.getAile() / 4,BYTE);
-    Serial.print(imu.getRoll() / 4 ,BYTE);
-    Serial.print((rollForce + 1023) / 8,BYTE);
-    
-    Serial.print(receiver.getElev() / 4,BYTE);
-    Serial.print(imu.getNick() / 4 ,BYTE);
-    Serial.print((nickForce + 1023) / 8,BYTE);
-    
-    Serial.print(receiver.getRudd() / 4,BYTE);
-    Serial.print(imu.getYaw() / 4 ,BYTE);
-    Serial.print((yawForce + 1023) / 8,BYTE);
-    
-    Serial.print(0,BYTE);
-    Serial.print(0,BYTE);
-    Serial.print(0,BYTE);
-    */
-  /*}
   
   //PID param trim
   //This can be used to trim PID params. (Setpoints (Se fast_loop) to PID must be set static (511) before enabeling this)

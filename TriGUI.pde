@@ -13,7 +13,7 @@ void TriGUIsendConfig(){
   Serial.println("***"); //Suffix
   TriGUIsendMessage(0, "Configuration sendt form tricopter");
 }
-s
+
 void TriGUIsendCopter(){
   if(bitRead(config[CV_TRICOPTER_ENABLE_BYTE], CV_TRIGUI_ENABLE_BIT) == 1){
     //Tricopter
