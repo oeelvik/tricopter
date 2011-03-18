@@ -13,13 +13,18 @@
 #define CV_YAW_SERVO_PIN_BYTE 4
 #define CV_MIN_THRO_BYTE 5 //Minimum trottle to activate motors and pid integration
 #define CV_MIN_ESC_BYTE 6 //Lowest value written to esc
-#define CV_PID_SAMPLE_TIME_BYTE 7 
-#define CV_PID_KP_BYTE 8
-#define CV_PID_KI_BYTE 9
-#define CV_PID_KD_BYTE 10
+#define CV_HOVER_PID_KP_BYTE 7
+#define CV_HOVER_PID_KI_BYTE 8
+#define CV_HOVER_PID_KD_BYTE 9
+#define CV_ACRO_PID_KP_BYTE 10
+#define CV_ACRO_PID_KI_BYTE 11
+#define CV_ACRO_PID_KD_BYTE 12
+#define CV_YAW_PID_KP_BYTE 13
+#define CV_YAW_PID_KI_BYTE 14
+#define CV_YAW_PID_KD_BYTE 15
 
 //------ Receiver ---------
-#define CV_RX_REVERSING_BYTE 11
+#define CV_RX_REVERSING_BYTE 16
   #define CV_RX_THRO_REV_BIT 0
   #define CV_RX_AILE_REV_BIT 1
   #define CV_RX_ELEV_REV_BIT 2
@@ -29,14 +34,14 @@
   
 //------ IMU --------
 //Pins
-#define CV_IMU_GYRO_ROLL_PIN_BYTE 12
-#define CV_IMU_GYRO_NICK_PIN_BYTE 13
-#define CV_IMU_GYRO_YAW_PIN_BYTE 14
-#define CV_IMU_ACC_ROLL_PIN_BYTE 15
-#define CV_IMU_ACC_NICK_PIN_BYTE 16
-#define CV_IMU_ACC_VERT_PIN_BYTE 17
+#define CV_IMU_GYRO_ROLL_PIN_BYTE 17
+#define CV_IMU_GYRO_NICK_PIN_BYTE 18
+#define CV_IMU_GYRO_YAW_PIN_BYTE 19
+#define CV_IMU_ACC_ROLL_PIN_BYTE 20
+#define CV_IMU_ACC_NICK_PIN_BYTE 21
+#define CV_IMU_ACC_VERT_PIN_BYTE 22
 //Reversing
-#define CV_IMU_REVERSING_BYTE 18
+#define CV_IMU_REVERSING_BYTE 23
   #define CV_IMU_GYRO_ROLL_REV_BIT 0
   #define CV_IMU_GYRO_NICK_REV_BIT 1
   #define CV_IMU_GYRO_YAW_REV_BIT 2
@@ -44,13 +49,13 @@
   #define CV_IMU_ACC_NICK_REV_BIT 4
   #define CV_IMU_ACC_VERT_REV_BIT 5
 //Accelerometer trim
-#define CV_IMU_ACC_ROLL_TRIM_BYTE 19
-#define CV_IMU_ACC_NICK_TRIM_BYTE 20
-#define CV_IMU_ACC_VERT_TRIM_BYTE 21
+#define CV_IMU_ACC_ROLL_TRIM_BYTE 24
+#define CV_IMU_ACC_NICK_TRIM_BYTE 25
+#define CV_IMU_ACC_VERT_TRIM_BYTE 26
 //Accelerometer gain
-#define CV_IMU_ACC_GAIN_BYTE 22
+#define CV_IMU_ACC_GAIN_BYTE 27
 
-#define CV_END_BYTE 22
+#define CV_END_BYTE 27
 
 
 

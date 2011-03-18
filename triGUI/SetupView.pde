@@ -21,10 +21,17 @@ Toggle sv_TriGUIEnable;
 Slider sv_minThrottle;
 Slider sv_minESC;
 
-Slider sv_PIDSampleTime;
-Slider sv_PIDKp;
-Slider sv_PIDKi;
-Slider sv_PIDKd;
+Slider sv_Hover_PIDKp;
+Slider sv_Hover_PIDKi;
+Slider sv_Hover_PIDKd;
+
+Slider sv_Acro_PIDKp;
+Slider sv_Acro_PIDKi;
+Slider sv_Acro_PIDKd;
+
+Slider sv_Yaw_PIDKp;
+Slider sv_Yaw_PIDKi;
+Slider sv_Yaw_PIDKd;
 
 void createSetupView(int x, int y, int width, int height){
   sv_x = x;
@@ -73,17 +80,32 @@ void createSetupView(int x, int y, int width, int height){
   sv_minESC = controlP5.addSlider("setMinESC",0,255,0,x+5,y+95,100,10);
   sv_minESC.setLabel("ESC Arm Value");
   
-  sv_PIDSampleTime = controlP5.addSlider("setPIDSampleTime",0,255,0,x+5,y+140,100,10);
-  sv_PIDSampleTime.setLabel("PID Sample Time (millis)");
+  sv_Hover_PIDKp = controlP5.addSlider("setHoverPIDKp",0,255,0,x+5,y+155,100,10);
+  sv_Hover_PIDKp.setLabel("H Kp");
   
-  sv_PIDKp = controlP5.addSlider("setPIDKp",0,255,0,x+5,y+155,100,10);
-  sv_PIDKp.setLabel("PID proportional gain");
+  sv_Hover_PIDKi = controlP5.addSlider("setHoverPIDKi",0,255,0,x+5,y+170,100,10);
+  sv_Hover_PIDKi.setLabel("H Ki");
   
-  sv_PIDKi = controlP5.addSlider("setPIDKi",0,255,0,x+5,y+170,100,10);
-  sv_PIDKi.setLabel("PID integral gain");
+  sv_Hover_PIDKd = controlP5.addSlider("setHoverPIDKd",0,255,0,x+5,y+185,100,10);
+  sv_Hover_PIDKd.setLabel("H Kd");
   
-  sv_PIDKd = controlP5.addSlider("setPIDKd",0,255,0,x+5,y+185,100,10);
-  sv_PIDKd.setLabel("PID derivative gain");
+  sv_Acro_PIDKp = controlP5.addSlider("setAcroPIDKp",0,255,0,x+135,y+155,100,10);
+  sv_Acro_PIDKp.setLabel("A Kp");
+  
+  sv_Acro_PIDKi = controlP5.addSlider("setAcroPIDKi",0,255,0,x+135,y+170,100,10);
+  sv_Acro_PIDKi.setLabel("A Ki");
+  
+  sv_Acro_PIDKd = controlP5.addSlider("setAcroPIDKd",0,255,0,x+135,y+185,100,10);
+  sv_Acro_PIDKd.setLabel("A Kd");
+  
+  sv_Yaw_PIDKp = controlP5.addSlider("setYawPIDKp",0,255,0,x+265,y+155,100,10);
+  sv_Yaw_PIDKp.setLabel("Y Kp");
+  
+  sv_Yaw_PIDKi = controlP5.addSlider("setYawPIDKi",0,255,0,x+265,y+170,100,10);
+  sv_Yaw_PIDKi.setLabel("Y Ki");
+  
+  sv_Yaw_PIDKd = controlP5.addSlider("setYawPIDKd",0,255,0,x+265,y+185,100,10);
+  sv_Yaw_PIDKd.setLabel("Y Kd");
   
   sv_createSerialUI(x,y);
   
@@ -125,20 +147,40 @@ void setMinESC(int val) {
   gui.tricopter.config.data[CV_MIN_ESC_BYTE] = val;
 }
 
-void setPIDSampleTime(int val) {
-  gui.tricopter.config.data[CV_PID_SAMPLE_TIME_BYTE] = val;
+void setHoverPIDKp(int val) {
+  gui.tricopter.config.data[CV_HOVER_PID_KP_BYTE] = val;
 }
 
-void setPIDKp(int val) {
-  gui.tricopter.config.data[CV_PID_KP_BYTE] = val;
+void setHoverPIDKi(int val) {
+  gui.tricopter.config.data[CV_HOVER_PID_KI_BYTE] = val;
 }
 
-void setPIDKi(int val) {
-  gui.tricopter.config.data[CV_PID_KI_BYTE] = val;
+void setHoverPIDKd(int val) {
+  gui.tricopter.config.data[CV_HOVER_PID_KD_BYTE] = val;
 }
 
-void setPIDKd(int val) {
-  gui.tricopter.config.data[CV_PID_KD_BYTE] = val;
+void setAcroPIDKp(int val) {
+  gui.tricopter.config.data[CV_ACRO_PID_KP_BYTE] = val;
+}
+
+void setAcroPIDKi(int val) {
+  gui.tricopter.config.data[CV_ACRO_PID_KI_BYTE] = val;
+}
+
+void setAcroPIDKd(int val) {
+  gui.tricopter.config.data[CV_ACRO_PID_KD_BYTE] = val;
+}
+
+void setYawPIDKp(int val) {
+  gui.tricopter.config.data[CV_YAW_PID_KP_BYTE] = val;
+}
+
+void setYawPIDKi(int val) {
+  gui.tricopter.config.data[CV_YAW_PID_KI_BYTE] = val;
+}
+
+void setYawPIDKd(int val) {
+  gui.tricopter.config.data[CV_YAW_PID_KD_BYTE] = val;
 }
 
 void enableHK(boolean theFlag) {
@@ -177,10 +219,15 @@ void updateSetupView(){
     if(sv_TriGUIEnable != null) sv_TriGUIEnable.setValue(bitRead(gui.tricopter.config.data[CV_TRICOPTER_ENABLE_BYTE], CV_TRIGUI_ENABLE_BIT));
     if(sv_minThrottle != null) sv_minThrottle.setValue(gui.tricopter.config.data[CV_MIN_THRO_BYTE]);
     if(sv_minESC != null) sv_minESC.setValue(gui.tricopter.config.data[CV_MIN_ESC_BYTE]);
-    if(sv_PIDSampleTime != null) sv_PIDSampleTime.setValue(gui.tricopter.config.data[CV_PID_SAMPLE_TIME_BYTE]);
-    if(sv_PIDKp != null) sv_PIDKp.setValue(gui.tricopter.config.data[CV_PID_KP_BYTE]);
-    if(sv_PIDKi != null) sv_PIDKi.setValue(gui.tricopter.config.data[CV_PID_KI_BYTE]);
-    if(sv_PIDKd != null) sv_PIDKd.setValue(gui.tricopter.config.data[CV_PID_KD_BYTE]);
+    if(sv_Hover_PIDKp != null) sv_Hover_PIDKp.setValue(gui.tricopter.config.data[CV_HOVER_PID_KP_BYTE]);
+    if(sv_Hover_PIDKi != null) sv_Hover_PIDKi.setValue(gui.tricopter.config.data[CV_HOVER_PID_KI_BYTE]);
+    if(sv_Hover_PIDKd != null) sv_Hover_PIDKd.setValue(gui.tricopter.config.data[CV_HOVER_PID_KD_BYTE]);
+    if(sv_Acro_PIDKp != null) sv_Acro_PIDKp.setValue(gui.tricopter.config.data[CV_ACRO_PID_KP_BYTE]);
+    if(sv_Acro_PIDKi != null) sv_Acro_PIDKi.setValue(gui.tricopter.config.data[CV_ACRO_PID_KI_BYTE]);
+    if(sv_Acro_PIDKd != null) sv_Acro_PIDKd.setValue(gui.tricopter.config.data[CV_ACRO_PID_KD_BYTE]);
+    if(sv_Yaw_PIDKp != null) sv_Yaw_PIDKp.setValue(gui.tricopter.config.data[CV_YAW_PID_KP_BYTE]);
+    if(sv_Yaw_PIDKi != null) sv_Yaw_PIDKi.setValue(gui.tricopter.config.data[CV_YAW_PID_KI_BYTE]);
+    if(sv_Yaw_PIDKd != null) sv_Yaw_PIDKd.setValue(gui.tricopter.config.data[CV_YAW_PID_KD_BYTE]);
   }
 }
 

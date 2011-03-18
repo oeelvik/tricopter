@@ -1,5 +1,4 @@
 //TODO: create library graph
-//TODO: create BarGraphView and BarGraph
 class BarGraphView {
   String label;
   int x;

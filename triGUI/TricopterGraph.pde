@@ -114,7 +114,6 @@ class TricopterGraph {
     ellipse(_x + _width / 2, _y + _height / 1.43, setPoint,  setPoint);
   }
 
-  //TODO: fix this
   void setYaw(int value, int setPoint) {
 
     value = (int)map(value, minValue, maxValue, -_width / 2, _width / 2);

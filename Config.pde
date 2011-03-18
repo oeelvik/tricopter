@@ -25,10 +25,15 @@ void resetConfig(){
   config[CV_YAW_SERVO_PIN_BYTE] = 3;
   config[CV_MIN_THRO_BYTE] = 50; // minThro = val * 4
   config[CV_MIN_ESC_BYTE] = 7; // minESC = val * 1.416667 eller map(val, 0, 255, 0, 179)
-  config[CV_PID_SAMPLE_TIME_BYTE] = 20; //Sampletime = val * 4 (0-1024 millis)
-  config[CV_PID_KP_BYTE] = 5; // Kp = var / 25 (0-10.2) 
-  config[CV_PID_KI_BYTE] = 20; //Ki = var / 255 (0-1)
-  config[CV_PID_KD_BYTE] = 180; //Kp = var / 25 (0-10.2)
+  config[CV_HOVER_PID_KP_BYTE] = 20; // Kp = var / 25 (0-10.2) 
+  config[CV_HOVER_PID_KI_BYTE] = 5; //Ki = var / 255 (0-1)
+  config[CV_HOVER_PID_KD_BYTE] = 180; //Kp = var / 25 (0-10.2)
+  config[CV_ACRO_PID_KP_BYTE] = 20; // Kp = var / 25 (0-10.2) 
+  config[CV_ACRO_PID_KI_BYTE] = 1; //Ki = var / 255 (0-1)
+  config[CV_ACRO_PID_KD_BYTE] = 0; //Kp = var / 25 (0-10.2)
+  config[CV_YAW_PID_KP_BYTE] = 50; // Kp = var / 25 (0-10.2) 
+  config[CV_YAW_PID_KI_BYTE] = 2; //Ki = var / 255 (0-1)
+  config[CV_YAW_PID_KD_BYTE] = 0; //Kp = var / 25 (0-10.2)
   
   //------ Receiver ---------
   config[CV_RX_REVERSING_BYTE] = 12;

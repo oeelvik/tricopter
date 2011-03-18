@@ -12,6 +12,7 @@ class Mixer{
     Mixer();
     void setMinESC(int val);
     void setMinThro(int val);
+    void setYawRev(bool val);
     void setMotorsEnabled(bool val);
     void setPins(int left, int right, int rear, int yaw);
     void setThrust(int throttle, int roll, int nick, int yaw );
@@ -34,6 +35,7 @@ class Mixer{
     int minESC;
     int minThro;
     bool motorsEnabled;
+    bool yawRev;
     
 };
 #endif /* MIXER_H_ */

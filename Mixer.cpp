@@ -10,6 +10,10 @@ void Mixer::setMinESC(int val){
 void Mixer::setMinThro(int val){
   minThro = val;
 }
+
+void Mixer::setYawRev(bool val){
+  yawRev = val;
+}
 void Mixer::setMotorsEnabled(bool val){
   motorsEnabled = val;
 }
@@ -38,16 +42,17 @@ void Mixer::setThrust(int throttle, int roll, int nick, int yaw ){
   rightThrust = constrain(map(throttle - roll + (nick / 2), 0, 1024, 0, 179), minESC, 179);
   
   //added yaw angle devided by some constant to compensate for vertical thrust loss
-  //TODO: adjust constant
+  //TODO: adjust constant deviding yaw
   rearThrust = constrain(map(throttle - nick + (abs(yaw) / 4), 0, 1024, 0, 179), minESC, 179);
   
   //yaw servo angle
-  yawPos = constrain(map(yaw, -1023, 1023, 0, 179), 0, 179);
+  if(yawRev) yawPos = constrain(map(yaw, -1023, 1023, 0, 179), 0, 179);
+  else yawPos = constrain(map(yaw, -1023, 1023, 0, 179), 179, 0);
   
   if(throttle < minThro){
-    leftThrust = 0;
-    rightThrust = 0;
-    rearThrust = 0;
+    leftThrust = minESC;
+    rightThrust = minESC;
+    rearThrust = minESC;
     yawPos = 90;
   }
     

@@ -1,5 +1,4 @@
 //TODO: Use software serial for communication with the compeuter
-//TODO: 
 
 #include <SatelliteReceive.h>
 #include <Servo.h>
@@ -12,8 +11,8 @@
 #include "Mixer.h"
 #include "PID.h"
 
-
-#define RESET_CONFIG 1 //Set to 1 to loade default config and save it to eeprom
+//Should only be set to 1 for testing purpose
+#define RESET_CONFIG 0 //Set to 1 to loade default config and save it to eeprom on startup
 
 //-------------- Ground Station ------------------------
 #define GS_RX_PIN 6
@@ -39,47 +38,69 @@ unsigned long fastLoopTimer;
 unsigned long fastLoopCount;
 unsigned int mediumLoopCount;
 
-//--------- Desired forces ---------------
-int throttle = 0;
-int rollForce = 0;
-int nickForce = 0;
-int yawForce = 0;
-
 //---------- PID --------------
 double rollOutput;
 double nickOutput;
 double yawOutput;
 
-PID rollPID;
-PID nickPID;
+PID rollHoverPID;
+PID nickHoverPID;
+
+PID rollAcroPID;
+PID nickAcroPID;
+
 PID yawPID;
 
 //----------- Configuration --------------
 int config[CV_END_BYTE + 1];
 
+//------------ Objects and copter vars --------------
 SatelliteReceive receiver;
 IMU imu;
 Mixer mix;
 
+int mode = 0x00; //0x00 = hover, 0x10 = acro
+int state = 0x00; //0x00 = off, 0x10 = configuring, 0x20 = armed, 0x30 = airborne, 0xA0 = Error
+
+int throttle = 0;
+
+/**
+ * Run once on startup
+ *
+ */
 void setup(){
+  state = 0x10;
+  
   analogReference(EXTERNAL);
   Serial.begin(115200);
   
   //Setup Ground Station Serial
   gsSerial.begin(19200);
   
+  //Reset configuration
   if(RESET_CONFIG == 1) resetConfig();
   
+  //Loade saved configuration
   readEEPROMConfig();
   
+  //Setup copter based on loaded config
   reloade();
   
-  rollPID.setOutputLimits(-1023,1023);
-  nickPID.setOutputLimits(-1023,1023);
+  
+  //Some setup only needed to run once
+  rollHoverPID.setOutputLimits(-1023,1023);
+  nickHoverPID.setOutputLimits(-1023,1023);
+  rollAcroPID.setOutputLimits(-1023,1023);
+  nickAcroPID.setOutputLimits(-1023,1023);
   yawPID.setOutputLimits(-1023,1023);
 }
 
+/**
+ * Setup copter based on configuration
+ */
 void reloade(){
+  state = 0x10;
+  
   TriGUIsendMessage(TRIGUI_MESSAGE_TYPE_INFO,"Setting configuration");
   
   //setup receiver reversing
@@ -101,15 +122,28 @@ void reloade(){
   //Setup Mixer
   mix.setMinESC(map(config[CV_MIN_ESC_BYTE], 0, 255, 0, 179));
   mix.setMinThro(map(config[CV_MIN_THRO_BYTE], 0, 255, 0, 1023));
+  mix.setYawRev((bitRead(config[CV_TRICOPTER_ENABLE_BYTE], CV_YAW_SERVO_REV_BIT) == 1));
   mix.setMotorsEnabled((bitRead(config[CV_TRICOPTER_ENABLE_BYTE], CV_MOTORS_ENABLE_BIT) == 1));
   mix.setPins(config[CV_LEFT_MOTOR_PIN_BYTE], config[CV_RIGHT_MOTOR_PIN_BYTE], config[CV_REAR_MOTOR_PIN_BYTE], config[CV_YAW_SERVO_PIN_BYTE]);
   
   //Setup PID
-  rollPID.setTunings((float)config[CV_PID_KP_BYTE] / 25, (float)config[CV_PID_KI_BYTE] / 255, (float)config[CV_PID_KD_BYTE] / 25);
-  nickPID.setTunings((float)config[CV_PID_KP_BYTE] / 25, (float)config[CV_PID_KI_BYTE] / 255, (float)config[CV_PID_KD_BYTE] / 25);
-  yawPID.setTunings((float)config[CV_PID_KP_BYTE] / 25, (float)config[CV_PID_KI_BYTE] / 255, (float)config[CV_PID_KD_BYTE] / 25);
+  rollHoverPID.setTunings((float)config[CV_HOVER_PID_KP_BYTE] / 25, (float)config[CV_HOVER_PID_KI_BYTE] / 255, (float)config[CV_HOVER_PID_KD_BYTE] / 25);
+  nickHoverPID.setTunings((float)config[CV_HOVER_PID_KP_BYTE] / 25, (float)config[CV_HOVER_PID_KI_BYTE] / 255, (float)config[CV_HOVER_PID_KD_BYTE] / 25);
+  
+  rollAcroPID.setTunings((float)config[CV_HOVER_PID_KP_BYTE] / 25, (float)config[CV_HOVER_PID_KI_BYTE] / 255, (float)config[CV_HOVER_PID_KD_BYTE] / 25);
+  nickAcroPID.setTunings((float)config[CV_HOVER_PID_KP_BYTE] / 25, (float)config[CV_HOVER_PID_KI_BYTE] / 255, (float)config[CV_HOVER_PID_KD_BYTE] / 25);
+  
+  yawPID.setTunings((float)config[CV_YAW_PID_KP_BYTE] / 25, (float)config[CV_YAW_PID_KI_BYTE] / 255, (float)config[CV_YAW_PID_KD_BYTE] / 25);
+  
+  
+  state = 0x20; //Armed
 }
 
+/**
+ * Main Loop
+ *
+ * Fastest running loop, initial loop timing and running realy fast tasks.
+ */
 void loop(){
   //50 Hz Loop
   if(millis()-fastLoopTimer > 19){
@@ -121,7 +155,7 @@ void loop(){
     mediumLoop();
   }
   
-  //Make shure we get all updates from receiver
+  //Make shure we register all serial updates from receiver
   if (Serial.available() > 0) {
     int inByte = Serial.read();
     receiver.regByte(inByte);
@@ -142,45 +176,47 @@ void loop(){
  * -PID controll
  * -Thrust updates
  */
- 
 void fastLoop(){
   imu.update();
   
+  mode = (receiver.getFlap() < RXCENTER) ? 0x00 : 0x10;
   
-  if(receiver.getThro() > config[CV_MIN_THRO_BYTE] * 4){
-    throttle = receiver.getThro();
-    
-    if(receiver.getFlap() < RXCENTER){ //Hover Mode (IMU stabled)
-    
-      rollOutput = rollPID.updatePid(receiver.getAile(), imu.getRoll());
-      nickOutput = nickPID.updatePid(receiver.getElev(), imu.getNick());
-      yawOutput = yawPID.updatePid(receiver.getRudd(), imu.getGyroYaw() + 511);
-      
-      
-    } else { //Stunt Mode (Gyro stabled)
-      rollOutput = rollPID.updatePid(receiver.getAile(), imu.getGyroRoll() + 511);
-      nickOutput = nickPID.updatePid(receiver.getElev(), imu.getGyroNick() + 511);
-      yawOutput = yawPID.updatePid(receiver.getRudd(), imu.getGyroYaw() + 511);
-    }
-    
+  throttle = receiver.getThro();
+  
+  //TODO: Check if failsafe works
+  //Failsafe (more than 500 millis sins last message from receiver)
+  if(receiver.getTimeSinceMessage() > 500) {
+    throttle = 0;
   }
   
-  //TODO: Reset PID for roll and nick (yaw is the same in both modes) when switshing to new mode or use seperate PID objects for eact mode
+  if(throttle > config[CV_MIN_THRO_BYTE] * 4){
+    state = 0x30; //Airborne
+    
+    if(mode != 0x10){ //Hover Mode (IMU stabled)
+      rollOutput = rollHoverPID.updatePid(map(receiver.getAile(),0,1023,383,639), imu.getRoll());
+      nickOutput = nickHoverPID.updatePid(map(receiver.getElev(),0,1023,383,639), imu.getNick());
+    } else { //Stunt Mode (Gyro stabled)
+      rollOutput = rollAcroPID.updatePid(receiver.getAile(), imu.getGyroRoll() + 511);
+      nickOutput = nickAcroPID.updatePid(receiver.getElev(), imu.getGyroNick() + 511);
+    }
+    
+    yawOutput = yawPID.updatePid(receiver.getRudd(), imu.getGyroYaw() + 511);
+  } else state = 0x10; //Armed
   
-  mix.setThrust(receiver.getThro(), rollOutput, nickOutput, yawOutput);
+  
+  mix.setThrust(throttle, rollOutput, nickOutput, yawOutput);
 }
 
 /**
  * Splits fast loop into 5 (10Hz each)
  * 
  * Used fore:
- * 0. 
- * 1. Get configuration
- * 2. Happy Killmore location
- * 3. Happy Killmore attitude
+ * 0. TriGUI Copter data
+ * 1. TriGUI Receiver data
+ * 2. Happy Killmore attitude and TriGUI IMU data
+ * 3. Happy Killmore location
  * 4. slow_loop()
  */
- 
 void mediumLoop(){
   //Each case at 10Hz
   switch(mediumLoopCount) {
@@ -207,6 +243,8 @@ void mediumLoop(){
 
 /**
  * 10Hz loop
+ * 
+ * Navigation should be implemented here
  */
  //TODO: split in 5 (2 Hz) like medium loop
 void slowLoop(){
