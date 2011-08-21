@@ -46,8 +46,8 @@ void Mixer::setThrust(int throttle, int roll, int nick, int yaw ){
   rearThrust = constrain(map(throttle - nick + (abs(yaw) / 4), 0, 1024, 0, 179), minESC, 179);
   
   //yaw servo angle
-  if(yawRev) yawPos = constrain(map(yaw, -1023, 1023, 0, 179), 0, 179);
-  else yawPos = constrain(map(yaw, -1023, 1023, 0, 179), 179, 0);
+  if(yawRev) yawPos = constrain(map(yaw, -1023, 1023, 179, 0), 0, 179);
+  else yawPos = constrain(map(yaw, -1023, 1023, 0, 179), 0, 179);
   
   if(throttle < minThro){
     leftThrust = minESC;

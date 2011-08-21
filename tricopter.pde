@@ -127,13 +127,13 @@ void reloade(){
   mix.setPins(config[CV_LEFT_MOTOR_PIN_BYTE], config[CV_RIGHT_MOTOR_PIN_BYTE], config[CV_REAR_MOTOR_PIN_BYTE], config[CV_YAW_SERVO_PIN_BYTE]);
   
   //Setup PID
-  rollHoverPID.setTunings((float)config[CV_HOVER_PID_KP_BYTE] / 25, (float)config[CV_HOVER_PID_KI_BYTE] / 255, (float)config[CV_HOVER_PID_KD_BYTE] / 25);
-  nickHoverPID.setTunings((float)config[CV_HOVER_PID_KP_BYTE] / 25, (float)config[CV_HOVER_PID_KI_BYTE] / 255, (float)config[CV_HOVER_PID_KD_BYTE] / 25);
+  rollHoverPID.setTunings((float)config[CV_HOVER_PID_KP_BYTE] / 25, (float)config[CV_HOVER_PID_KI_BYTE] / 2550, (float)config[CV_HOVER_PID_KD_BYTE] / 25);
+  nickHoverPID.setTunings((float)config[CV_HOVER_PID_KP_BYTE] / 25, (float)config[CV_HOVER_PID_KI_BYTE] / 2550, (float)config[CV_HOVER_PID_KD_BYTE] / 25);
   
-  rollAcroPID.setTunings((float)config[CV_HOVER_PID_KP_BYTE] / 25, (float)config[CV_HOVER_PID_KI_BYTE] / 255, (float)config[CV_HOVER_PID_KD_BYTE] / 25);
-  nickAcroPID.setTunings((float)config[CV_HOVER_PID_KP_BYTE] / 25, (float)config[CV_HOVER_PID_KI_BYTE] / 255, (float)config[CV_HOVER_PID_KD_BYTE] / 25);
+  rollAcroPID.setTunings((float)config[CV_HOVER_PID_KP_BYTE] / 25, (float)config[CV_HOVER_PID_KI_BYTE] / 2550, (float)config[CV_HOVER_PID_KD_BYTE] / 25);
+  nickAcroPID.setTunings((float)config[CV_HOVER_PID_KP_BYTE] / 25, (float)config[CV_HOVER_PID_KI_BYTE] / 2550, (float)config[CV_HOVER_PID_KD_BYTE] / 25);
   
-  yawPID.setTunings((float)config[CV_YAW_PID_KP_BYTE] / 25, (float)config[CV_YAW_PID_KI_BYTE] / 255, (float)config[CV_YAW_PID_KD_BYTE] / 25);
+  yawPID.setTunings((float)config[CV_YAW_PID_KP_BYTE] / 25, (float)config[CV_YAW_PID_KI_BYTE] / 2550, (float)config[CV_YAW_PID_KD_BYTE] / 25);
   
   
   state = 0x20; //Armed
@@ -193,8 +193,8 @@ void fastLoop(){
     state = 0x30; //Airborne
     
     if(mode != 0x10){ //Hover Mode (IMU stabled)
-      rollOutput = rollHoverPID.updatePid(map(receiver.getAile(),0,1023,383,639), imu.getRoll());
-      nickOutput = nickHoverPID.updatePid(map(receiver.getElev(),0,1023,383,639), imu.getNick());
+      rollOutput = rollHoverPID.updatePid(receiver.getAile(), imu.getRoll());
+      nickOutput = nickHoverPID.updatePid(receiver.getElev(), imu.getNick());
     } else { //Stunt Mode (Gyro stabled)
       rollOutput = rollAcroPID.updatePid(receiver.getAile(), imu.getGyroRoll() + 511);
       nickOutput = nickAcroPID.updatePid(receiver.getElev(), imu.getGyroNick() + 511);

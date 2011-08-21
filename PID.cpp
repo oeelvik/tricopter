@@ -27,12 +27,13 @@ int PID::updatePid(int setPoint, int input){
     _integratedError += error; 
   }
   
+  int pTerm = _Kp * error;
   int iTerm = _Ki * _integratedError;
-  int dTerm = _Kd * (error - _lastError);                            
+  int dTerm = _Kd * (error - _lastError);     
   
   _lastError = error;
   
-  int output = _Kp * (error + iTerm + dTerm);
+  int output = pTerm + iTerm + dTerm;
   _lastOutput = output;
   
   return constrain(output, _outputMin, _outputMax);
