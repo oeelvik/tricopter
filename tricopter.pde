@@ -127,13 +127,13 @@ void reloade(){
   mix.setPins(config[CV_LEFT_MOTOR_PIN_BYTE], config[CV_RIGHT_MOTOR_PIN_BYTE], config[CV_REAR_MOTOR_PIN_BYTE], config[CV_YAW_SERVO_PIN_BYTE]);
   
   //Setup PID
-  rollHoverPID.setTunings((float)config[CV_HOVER_PID_KP_BYTE] / 25, (float)config[CV_HOVER_PID_KI_BYTE] / 2550, (float)config[CV_HOVER_PID_KD_BYTE] / 25);
-  nickHoverPID.setTunings((float)config[CV_HOVER_PID_KP_BYTE] / 25, (float)config[CV_HOVER_PID_KI_BYTE] / 2550, (float)config[CV_HOVER_PID_KD_BYTE] / 25);
+  rollHoverPID.setTunings((float)config[CV_HOVER_PID_KP_BYTE] / 25, (float)config[CV_HOVER_PID_KI_BYTE] / 25500, (float)config[CV_HOVER_PID_KD_BYTE] / 25);
+  nickHoverPID.setTunings((float)config[CV_HOVER_PID_KP_BYTE] / 25, (float)config[CV_HOVER_PID_KI_BYTE] / 25500, (float)config[CV_HOVER_PID_KD_BYTE] / 25);
   
-  rollAcroPID.setTunings((float)config[CV_HOVER_PID_KP_BYTE] / 25, (float)config[CV_HOVER_PID_KI_BYTE] / 2550, (float)config[CV_HOVER_PID_KD_BYTE] / 25);
-  nickAcroPID.setTunings((float)config[CV_HOVER_PID_KP_BYTE] / 25, (float)config[CV_HOVER_PID_KI_BYTE] / 2550, (float)config[CV_HOVER_PID_KD_BYTE] / 25);
+  rollAcroPID.setTunings((float)config[CV_HOVER_PID_KP_BYTE] / 25, (float)config[CV_HOVER_PID_KI_BYTE] / 25500, (float)config[CV_HOVER_PID_KD_BYTE] / 25);
+  nickAcroPID.setTunings((float)config[CV_HOVER_PID_KP_BYTE] / 25, (float)config[CV_HOVER_PID_KI_BYTE] / 25500, (float)config[CV_HOVER_PID_KD_BYTE] / 25);
   
-  yawPID.setTunings((float)config[CV_YAW_PID_KP_BYTE] / 25, (float)config[CV_YAW_PID_KI_BYTE] / 2550, (float)config[CV_YAW_PID_KD_BYTE] / 25);
+  yawPID.setTunings((float)config[CV_YAW_PID_KP_BYTE] / 25, (float)config[CV_YAW_PID_KI_BYTE] / 25500, (float)config[CV_YAW_PID_KD_BYTE] / 25);
   
   
   state = 0x20; //Armed
@@ -146,7 +146,7 @@ void reloade(){
  */
 void loop(){
   //50 Hz Loop
-  if(millis()-fastLoopTimer > 19){
+  if(millis()-fastLoopTimer > 4){
     fastLoopTimer = millis();
     fastLoopCount++;
     
@@ -234,9 +234,11 @@ void mediumLoop(){
       HappyKillmoreSendLocation();
       break;
     case 4:
-      mediumLoopCount = -1;
       slowLoop();
       break;
+    default:
+      if(mediumLoopCount > 18) mediumLoopCount = -1;
+    
   }
   mediumLoopCount++;
 }
@@ -248,5 +250,8 @@ void mediumLoop(){
  */
  //TODO: split in 5 (2 Hz) like medium loop
 void slowLoop(){
+  TriGUIsendMessage(0, "------------");
+  TriGUIsendMessage(0, millis()-fastLoopTimer);
+  TriGUIsendMessage(0, fastLoopCount);
   
 }
