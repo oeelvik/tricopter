@@ -4,7 +4,7 @@
 #include <Servo.h>
 #include <IMU.h>
 #include <EEPROM.h>
-#include <NewSoftSerial.h>
+//#include <NewSoftSerial.h>
 
 
 #include "ConfigAdressing.cpp"
@@ -19,7 +19,7 @@
 #define GS_TX_PIN 5
 #define GS_BYTE_LIMIT 50
 
-NewSoftSerial gsSerial(GS_RX_PIN,GS_TX_PIN);
+//NewSoftSerial gsSerial(GS_RX_PIN,GS_TX_PIN);
 
 boolean gsInMessage = false;
 int gsMessageByteCount = 0;
@@ -75,7 +75,7 @@ void setup(){
   Serial.begin(115200);
   
   //Setup Ground Station Serial
-  gsSerial.begin(19200);
+  //gsSerial.begin(19200);
   
   //Reset configuration
   if(RESET_CONFIG == 1) resetConfig();
@@ -251,7 +251,7 @@ void mediumLoop(){
  //TODO: split in 5 (2 Hz) like medium loop
 void slowLoop(){
   TriGUIsendMessage(0, "------------");
-  TriGUIsendMessage(0, millis()-fastLoopTimer);
-  TriGUIsendMessage(0, fastLoopCount);
+  TriGUIsendMessage(0, String(millis()-fastLoopTimer));
+  TriGUIsendMessage(0, String(fastLoopCount));
   
 }

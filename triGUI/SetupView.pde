@@ -45,34 +45,17 @@ void createSetupView(int x, int y, int width, int height){
   
   
   
-  ToggleDisplay display = new ToggleDisplay();
   sv_HKEnable = controlP5.addToggle("enableHK",false,x+160,y+5,15,15);
   sv_HKEnable.setLabel("Happy Killmore");
-  sv_HKEnable.setDisplay(display);
-  sv_HKEnable.setColorBackground(color(255,0,0));
-  sv_HKEnable.setColorActive(color(0,255,0));
-  sv_HKEnable.setLabelVisible(false);
   
   sv_TriGUIEnable = controlP5.addToggle("enableTriGUI",true,x+160,y+25,15,15);
   sv_TriGUIEnable.setLabel("TriGUI data");
-  sv_TriGUIEnable.setDisplay(display);
-  sv_TriGUIEnable.setColorBackground(color(255,0,0));
-  sv_TriGUIEnable.setColorActive(color(0,255,0));
-  sv_TriGUIEnable.setLabelVisible(false);
   
   sv_motorsEnable = controlP5.addToggle("enableMotors",false,x+5,y+60,15,15);
   sv_motorsEnable.setLabel("Motors");
-  sv_motorsEnable.setDisplay(display);
-  sv_motorsEnable.setColorBackground(color(255,0,0));
-  sv_motorsEnable.setColorActive(color(0,255,0));
-  sv_motorsEnable.setLabelVisible(false);
   
   sv_PIDEnable = controlP5.addToggle("enablePID",true,x+5,y+120,15,15);
   sv_PIDEnable.setLabel("PID");
-  sv_PIDEnable.setDisplay(display);
-  sv_PIDEnable.setColorBackground(color(255,0,0));
-  sv_PIDEnable.setColorActive(color(0,255,0));
-  sv_PIDEnable.setLabelVisible(false);
   
   sv_minThrottle = controlP5.addSlider("setMinThrottle",0,255,0,x+5,y+80,100,10);
   sv_minThrottle.setLabel("Minimum Throttle Value");
@@ -247,7 +230,7 @@ void controlEvent(ControlEvent theEvent) {
 
   if (theEvent.isGroup()) {
     // check if the Event was triggered from a ControlGroup
-    //println(theEvent.group().value()+" from "+theEvent.group());
+    println(theEvent.group().value()+" from "+theEvent.group());
     
     
   } else if(theEvent.isController()) {
@@ -272,7 +255,7 @@ void controlEvent(ControlEvent theEvent) {
       }
       
       
-      String name = sv_selectSerial.stringValue();
+      String name = Serial.list()[(int)sv_selectSerial.getValue()];
       if(name == "Serial Port") {
         if(Serial.list().length > 0) name = Serial.list()[0];
       }
@@ -280,6 +263,7 @@ void controlEvent(ControlEvent theEvent) {
       if(name != "Serial Port"){
         int val = (int)sv_selectSerialBaud.value();
         if(val < 1) val = 115200;
+        
         serial = new Serial(this, name, val);
         gui.serialHandler.setSerial(serial);
       }
@@ -287,23 +271,3 @@ void controlEvent(ControlEvent theEvent) {
   }
 }
 
-class ToggleDisplay implements ControllerDisplay{
-  void display(PApplet p, Controller c){
-    Toggle t = (Toggle)c;
-    if(t.getState()){
-      noStroke();
-      fill(t.getColor().getActive());
-      p.rect(0,0,t.getWidth(),t.getHeight());
-    }
-    else {
-      
-      noStroke();
-      fill(t.getColor().getBackground());
-      p.rect(0,0,t.getWidth(),t.getHeight());
-    }
-    
-    fill(255);
-    textAlign(LEFT,CENTER);
-    p.text(t.label(), t.getWidth() + 2, t.getHeight()/2);
-  }
-}

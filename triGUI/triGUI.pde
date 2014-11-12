@@ -11,13 +11,13 @@ TriGUI gui;
 PFont font = createFont("Verdana", 30, true);
 
 void setup() {
-  size(screen.width,screen.height);
+  size(displayWidth, displayHeight);
 
   serialHandler = new SerialComHandler();
   
   //serial = new Serial(this, "COM3", 115200);
   
-  gui = new TriGUI( 0, 0, screen.width, screen.height, serialHandler);
+  gui = new TriGUI( 0, 0, displayWidth, displayHeight, serialHandler);
 }
 
 void serialEvent(Serial myPort) {

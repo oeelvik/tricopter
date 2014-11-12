@@ -1,4 +1,8 @@
-#include "WProgram.h"
+#if defined(ARDUINO) && ARDUINO >= 100
+  #include "Arduino.h"
+#else
+  #include "WProgram.h"
+#endif
 
 #ifndef PID_H_
 #define PID_H_
