@@ -157,7 +157,8 @@ class TriGUI {
     nickGraph.plot();
     
     yawSetPointGraph.setValue(this.tricopter.receiver.rudd);
-    yawMeasurementGraph.setValue(this.tricopter.imu.gYaw);
+    if(this.tricopter.mode == 0x00) yawMeasurementGraph.setValue(this.tricopter.imu.yaw);
+    else nickMeasurementGraph.setValue(this.tricopter.imu.gYaw);
     yawThrustGraph.setValue(this.tricopter.PIDYaw);
     yawGraph.plot();
     

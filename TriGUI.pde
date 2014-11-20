@@ -63,16 +63,16 @@ void TriGUIsendIMU(){
     Serial.write(4); //CMD IMU
     
     //Signal
-    Serial.write(imu.getRoll() / 4);
-    Serial.write(imu.getNick() / 4);
-    Serial.write(imu.getYaw() / 4);
+    Serial.write(map(imu.getRollDegree(), -180, 180, 0, 255));
+    Serial.write(map(imu.getNickDegree(), -180, 180, 0, 255));
+    Serial.write(map(imu.getYawDegree(), -180, 180, 0, 255));
     
-    Serial.write(imu.getGyroRoll() / 8 + 127);
-    Serial.write(imu.getGyroNick() / 8 + 127);
-    Serial.write(imu.getGyroYaw() / 8 + 127);
+    Serial.write(0);//imu.getGyroRoll() / 8 + 127);
+    Serial.write(0);//imu.getGyroNick() / 8 + 127);
+    Serial.write(0);//imu.getGyroYaw() / 8 + 127);
     
-    Serial.write(imu.getAccRoll() / 4);
-    Serial.write(imu.getAccNick() / 4);
+    Serial.write(0);//imu.getAccRoll() / 4);
+    Serial.write(0);//imu.getAccNick() / 4);
     Serial.write(0); // AccVert //TODO: not implemented in IMU class
     
     Serial.println("***"); //Suffix

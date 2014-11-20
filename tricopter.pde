@@ -2,10 +2,10 @@
 
 #include <SatelliteReceive.h>
 #include <Servo.h>
-#include <IMU.h>
+#include <IMURazor.h>
 #include <EEPROM.h>
+#include <math.h>
 //#include <NewSoftSerial.h>
-
 
 #include "ConfigAdressing.cpp"
 #include "Mixer.h"
@@ -56,7 +56,7 @@ int config[CV_END_BYTE + 1];
 
 //------------ Objects and copter vars --------------
 SatelliteReceive receiver;
-IMU imu;
+IMURazor imu;
 Mixer mix;
 
 int mode = 0x00; //0x00 = hover, 0x10 = acro
@@ -107,18 +107,6 @@ void reloade(){
   int reversing = config[CV_RX_REVERSING_BYTE]; 
   receiver.setReversing( (bitRead(reversing,CV_RX_THRO_REV_BIT )==1), (bitRead(reversing,CV_RX_AILE_REV_BIT )==1), (bitRead(reversing,CV_RX_ELEV_REV_BIT )==1), (bitRead(reversing,CV_RX_RUDD_REV_BIT )==1), (bitRead(reversing,CV_RX_GEAR_REV_BIT )==1), (bitRead(reversing,CV_RX_FLAP_REV_BIT )==1));
   
-  //Setup IMU
-  float gyro_scale = 11.044;//(1024/360)/1024 * 3,3/0,00083 (0,83mv/deg/sec)
-  float acc_scale = (float)1024 / 4 / 102;//(float) 300 / 3300 * 1024; //300[mV pr g] / 3300[Aref] * 1024 = 93 [val at 1g] //Adjusted to 102 after trail and error
-  imu.setGyroScale(gyro_scale);
-  imu.setAccScale(acc_scale);
-  imu.setAccGain((float)config[CV_IMU_ACC_GAIN_BYTE] / 100);
-  imu.setAccTrim((config[CV_IMU_ACC_ROLL_TRIM_BYTE] * 4) - 511, (config[CV_IMU_ACC_NICK_TRIM_BYTE] * 4) - 511, (config[CV_IMU_ACC_VERT_TRIM_BYTE] * 4) - 511);
-  imu.setPins(config[CV_IMU_GYRO_ROLL_PIN_BYTE], config[CV_IMU_GYRO_NICK_PIN_BYTE], config[CV_IMU_GYRO_YAW_PIN_BYTE], config[CV_IMU_ACC_ROLL_PIN_BYTE], config[CV_IMU_ACC_NICK_PIN_BYTE], config[CV_IMU_ACC_VERT_PIN_BYTE]);
-  reversing = config[CV_IMU_REVERSING_BYTE]; 
-  imu.setReversing( (bitRead(reversing,CV_IMU_GYRO_ROLL_REV_BIT )==1), (bitRead(reversing,CV_IMU_GYRO_NICK_REV_BIT )==1), (bitRead(reversing,CV_IMU_GYRO_YAW_REV_BIT )==1), (bitRead(reversing,CV_IMU_ACC_ROLL_REV_BIT )==1), (bitRead(reversing,CV_IMU_ACC_NICK_REV_BIT )==1), (bitRead(reversing,CV_IMU_ACC_VERT_REV_BIT )==1) );
-  imu.calibrateGyro();
-  
   //Setup Mixer
   mix.setMinESC(map(config[CV_MIN_ESC_BYTE], 0, 255, 0, 179));
   mix.setMinThro(map(config[CV_MIN_THRO_BYTE], 0, 255, 0, 1023));
@@ -134,8 +122,34 @@ void reloade(){
   nickAcroPID.setTunings((float)config[CV_HOVER_PID_KP_BYTE] / 25, (float)config[CV_HOVER_PID_KI_BYTE] / 25500, (float)config[CV_HOVER_PID_KD_BYTE] / 25);
   
   yawPID.setTunings((float)config[CV_YAW_PID_KP_BYTE] / 25, (float)config[CV_YAW_PID_KI_BYTE] / 25500, (float)config[CV_YAW_PID_KD_BYTE] / 25);
-  
-  
+
+  //Setup IMU
+  imu.setAccelWeight((float)config[CV_IMU_ACC_WEIGHT_BYTE] / 100);
+  imu.setMagWeight(0.0);
+  imu.setAccelTrim(
+    (config[CV_IMU_ACC_NICK_TRIM_BYTE] * 4) - 511, 
+    (config[CV_IMU_ACC_ROLL_TRIM_BYTE] * 4) - 511, 
+    (config[CV_IMU_ACC_VERT_TRIM_BYTE] * 4) - 511
+    );
+  imu.setPins( 
+    config[CV_IMU_ACC_NICK_PIN_BYTE], 
+    config[CV_IMU_ACC_ROLL_PIN_BYTE],
+    config[CV_IMU_ACC_VERT_PIN_BYTE],
+    config[CV_IMU_GYRO_ROLL_PIN_BYTE], 
+    config[CV_IMU_GYRO_NICK_PIN_BYTE], 
+    config[CV_IMU_GYRO_YAW_PIN_BYTE]
+    );
+  reversing = config[CV_IMU_REVERSING_BYTE]; 
+  imu.setReversing( 
+    (bitRead(reversing,CV_IMU_ACC_NICK_REV_BIT )==1),
+    (bitRead(reversing,CV_IMU_ACC_ROLL_REV_BIT )==1), 
+    (bitRead(reversing,CV_IMU_ACC_VERT_REV_BIT )==1), 
+    (bitRead(reversing,CV_IMU_GYRO_ROLL_REV_BIT )==1), 
+    (bitRead(reversing,CV_IMU_GYRO_NICK_REV_BIT )==1), 
+    (bitRead(reversing,CV_IMU_GYRO_YAW_REV_BIT )==1) 
+    );
+  imu.init();
+
   state = 0x20; //Armed
 }
 
@@ -192,15 +206,16 @@ void fastLoop(){
   if(throttle > config[CV_MIN_THRO_BYTE] * 4){
     state = 0x30; //Airborne
     
-    if(mode != 0x10){ //Hover Mode (IMU stabled)
-      rollOutput = rollHoverPID.updatePid(receiver.getAile(), imu.getRoll());
-      nickOutput = nickHoverPID.updatePid(receiver.getElev(), imu.getNick());
-    } else { //Stunt Mode (Gyro stabled)
+    //TODO: Refactor and implement stunt mode
+    //if(mode != 0x10){ //Hover Mode (IMU stabled)
+      rollOutput = rollHoverPID.updatePid(receiver.getAile(), map(imu.getRollDegree(), -180, 180, 0, 1023));
+      nickOutput = nickHoverPID.updatePid(receiver.getElev(), map(imu.getNickDegree(), -180, 180, 0, 1023));
+    /*} else { //Stunt Mode (Gyro stabled)
       rollOutput = rollAcroPID.updatePid(receiver.getAile(), imu.getGyroRoll() + 511);
       nickOutput = nickAcroPID.updatePid(receiver.getElev(), imu.getGyroNick() + 511);
-    }
+    }*/
     
-    yawOutput = yawPID.updatePid(receiver.getRudd(), imu.getGyroYaw() + 511);
+    yawOutput = yawPID.updatePid(receiver.getRudd(), map(imu.getYawDegree(), -180, 180, 0, 1023));
   } else state = 0x10; //Armed
   
   

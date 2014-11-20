@@ -53,7 +53,7 @@
 #define CV_IMU_ACC_NICK_TRIM_BYTE 25
 #define CV_IMU_ACC_VERT_TRIM_BYTE 26
 //Accelerometer gain
-#define CV_IMU_ACC_GAIN_BYTE 27
+#define CV_IMU_ACC_WEIGHT_BYTE 27
 
 #define CV_END_BYTE 27
 
