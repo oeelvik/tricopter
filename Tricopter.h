@@ -17,6 +17,8 @@
 #include <StopWatch.h> //TODO:remove after benchmark test
 
 #include <Configuration.h>
+#include <GroundStation.h>
+#include <Directions.h>
 #include <Mixer.h>
 #include <PID.h>
 
@@ -34,19 +36,6 @@
 #define STATE_AIRBORNE 0x60
 #define STATE_ERROR 0xA0
 
-struct Directions {
-  int throttle;
-  int roll;
-  int nick;
-  int yaw;
-  };
-
-//TODO: refactor
-//---------------- TriGUI ------------- 
-#define TRIGUI_MESSAGE_TYPE_INFO 0
-#define TRIGUI_MESSAGE_TYPE_WARNING 1
-#define TRIGUI_MESSAGE_TYPE_ERROR 2
-
 
 class Tricopter {
 public:
@@ -62,22 +51,13 @@ public:
 	void setState(byte state);
 	void updateSetPoints();
 
-	//TODO: refactor
-	void gsReceive(byte inByte);
-	void gsCallReceiver();
-	void HappyKillmoreSendAttitude();
-	void HappyKillmoreSendLocation();
-	void TriGUIsendMessage(int type, String message);
-	void TriGUIsendConfig();
-	void TriGUIsendCopter();
-	void TriGUIsendReceiver();
-	void TriGUIsendIMU();
 
 private:
 	byte state;
 	byte mode;
 
 	Configuration config;
+	GroundStation groundStation;
 
 	unsigned long fastLoopCount;
 	unsigned long mediumLoopStartTime;
@@ -101,14 +81,6 @@ private:
 	Mixer mix;
 
 	StopWatch stopWatch; //TODO:remove after benchmark test
-
-	//TODO: refactor:
-	bool gsInMessage;
-	byte gsMessageByteCount;
-	byte gsPostFixCount;
-	byte gsData[50];
-	byte gsDataByteCount;
-	byte gsCMD;
 
 };
 

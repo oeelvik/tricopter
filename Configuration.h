@@ -16,6 +16,8 @@
 
 class Configuration {
 public:
+	bool dirty;
+	
 	Configuration(int eepromStart);
 	byte get(byte adress);
 	void set(byte conf[]);
@@ -24,7 +26,7 @@ public:
 private:
 	byte config[CV_END_BYTE + 1];
 	int eepromStart;
-	
+
 	void readEEPROM();
 	void writeEEPROM();
 };
