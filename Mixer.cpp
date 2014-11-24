@@ -1,7 +1,6 @@
 #include "Mixer.h"
 
 
-
 Mixer::Mixer(){}
 
 void Mixer::setMinESC(int val){

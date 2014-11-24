@@ -1,22 +1,31 @@
-void setConfig(int conf[]){
+/*
+ * Configuration.cpp
+ *
+ * author: Øystein Schrøder Elvik
+ */
+
+#include "Configuration.h"
+
+#include <EEPROM.h>
+
+Configuration::Configuration(int eepromStart){
+	this->eepromStart = eepromStart;
+
+	readEEPROM();
+}
+
+byte Configuration::get(byte address){
+	return config[address];
+}
+
+void Configuration::set(byte conf[]){
   for(int i=0; i < CV_END_BYTE + 1; i++) config[i]=conf[i];
-  writeEEPROMConfig();
-  reloade();
+
+  writeEEPROM();
 }
 
-void readEEPROMConfig(){
-  for(int i = 0; i < CV_END_BYTE + 1; i++){
-    config[i] = EEPROM.read(i);
-  }
-}
-void writeEEPROMConfig(){
-  for(int i = 0; i < CV_END_BYTE + 1; i++){
-    EEPROM.write(i, config[i]);
-  }
-}
-
-void resetConfig(){
-  int config[CV_END_BYTE + 1];
+void Configuration::reset(){
+  byte config[CV_END_BYTE + 1];
   config[CV_TRICOPTER_ENABLE_BYTE] = 255; //Enable all
   
   config[CV_LEFT_MOTOR_PIN_BYTE] = 11;
@@ -54,5 +63,16 @@ void resetConfig(){
   //Accelerometer gain
   config[CV_IMU_ACC_WEIGHT_BYTE] = 4; //gain = val / 100
   
-  setConfig(config);
+  set(config);
+}
+
+void Configuration::readEEPROM(){
+  for(int i = 0; i < CV_END_BYTE + 1; i++){
+    config[i] = EEPROM.read(i + eepromStart);
+  }
+}
+void Configuration::writeEEPROM(){
+  for(int i = 0; i < CV_END_BYTE + 1; i++){
+    EEPROM.write(i + eepromStart, config[i]);
+  }
 }

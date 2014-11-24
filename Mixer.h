@@ -1,3 +1,6 @@
+#ifndef MIXER_H_
+#define MIXER_H_
+
 #if defined(ARDUINO) && ARDUINO >= 100
   #include "Arduino.h"
 #else
@@ -6,9 +9,6 @@
 
 #include <Servo.h>
 
-
-#ifndef MIXER_H_
-#define MIXER_H_
 class Mixer{
   public:
     Mixer();
