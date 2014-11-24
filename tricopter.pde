@@ -6,6 +6,7 @@
 #include <EEPROM.h>
 #include <math.h>
 //#include <NewSoftSerial.h>
+#include <StopWatch.h> //TODO:remove after benchmark test
 
 #include "ConfigAdressing.cpp"
 #include "Mixer.h"
@@ -33,10 +34,10 @@ int gsCMD;
 #define TRIGUI_MESSAGE_TYPE_WARNING 1
 #define TRIGUI_MESSAGE_TYPE_ERROR 2
 
-//------------- Loop Timers --------------------
-unsigned long fastLoopTimer;
 unsigned long fastLoopCount;
-unsigned int mediumLoopCount;
+
+unsigned long mediumLoopStartTime;
+unsigned long mediumLoopCount;
 
 //---------- PID --------------
 double rollOutput;
@@ -59,23 +60,77 @@ SatelliteReceive receiver;
 IMURazor imu;
 Mixer mix;
 
-int mode = 0x00; //0x00 = hover, 0x10 = acro
-int state = 0x00; //0x00 = off, 0x10 = configuring, 0x20 = armed, 0x30 = airborne, 0xA0 = Error
 
-int throttle = 0;
+int inByte;
+
+struct SetPoint {
+  int throttle;
+  int roll;
+  int nick;
+  int yaw;
+  };
+
+SetPoint setPoint = {0, RXCENTER, RXCENTER, RXCENTER};
+
+#define MODE_POSITION 0 //Hold position GPS and Compass ass setpoint Receiver to alter desired position
+#define MODE_HOVER 1 //IMU stabilized Receiver setpoint
+#define MODE_STUNT 2 //GYRO stabilized Receiver setpoint
+byte mode = MODE_POSITION;
+
+#define STATE_OFF 0x00
+#define STATE_CONFIG 0x20
+#define STATE_READY 0x40
+#define STATE_AIRBORNE 0x60
+#define STATE_ERROR 0xA0
+byte state = STATE_OFF;
+
+void setState(byte s){
+  state = s;
+  //TODO: implement status lights
+  // switch (state) {
+  //     case STATE_OFF:
+  //       // do something
+  //       break;
+  //     case STATE_CONFIG:
+  //       // do something
+  //       break;
+  //     case STATE_READY:
+  //       // do something
+  //       break;
+  //     case STATE_AIRBORNE:
+  //       // do something
+  //       break;
+  //     case STATE_ERROR:
+  //     default:
+  //       // do something
+  //}
+}
+
+
+StopWatch stopWatch; //TODO:remove after benchmark test
+
 
 /**
  * Run once on startup
  *
  */
 void setup(){
-  state = 0x10;
+  stopWatch.init(); //TODO:remove after benchmark test
+
+  setState(STATE_CONFIG);
   
   analogReference(EXTERNAL);
   Serial.begin(115200);
   
   //Setup Ground Station Serial
   //gsSerial.begin(19200);
+
+  //Some setup only needed to run once
+  rollHoverPID.setOutputLimits(-1023,1023);
+  nickHoverPID.setOutputLimits(-1023,1023);
+  rollAcroPID.setOutputLimits(-1023,1023);
+  nickAcroPID.setOutputLimits(-1023,1023);
+  yawPID.setOutputLimits(-1023,1023);
   
   //Reset configuration
   if(RESET_CONFIG == 1) resetConfig();
@@ -86,20 +141,13 @@ void setup(){
   //Setup copter based on loaded config
   reloade();
   
-  
-  //Some setup only needed to run once
-  rollHoverPID.setOutputLimits(-1023,1023);
-  nickHoverPID.setOutputLimits(-1023,1023);
-  rollAcroPID.setOutputLimits(-1023,1023);
-  nickAcroPID.setOutputLimits(-1023,1023);
-  yawPID.setOutputLimits(-1023,1023);
 }
 
 /**
  * Setup copter based on configuration
  */
 void reloade(){
-  state = 0x10;
+  setState(STATE_CONFIG);
   
   TriGUIsendMessage(TRIGUI_MESSAGE_TYPE_INFO,"Setting configuration");
   
@@ -150,7 +198,7 @@ void reloade(){
     );
   imu.init();
 
-  state = 0x20; //Armed
+  setState(STATE_READY);
 }
 
 /**
@@ -159,100 +207,94 @@ void reloade(){
  * Fastest running loop, initial loop timing and running realy fast tasks.
  */
 void loop(){
-  //50 Hz Loop
-  if(millis()-fastLoopTimer > 4){
-    fastLoopTimer = millis();
-    fastLoopCount++;
-    
-    fastLoop();
-    
+  fastLoopCount ++;
+
+  //100 Hz Loop
+  if(millis()-mediumLoopStartTime > 9){
+    mediumLoopStartTime = millis();
+
     mediumLoop();
   }
-  
-  //Make shure we register all serial updates from receiver
-  if (Serial.available() > 0) {
-    int inByte = Serial.read();
-    receiver.regByte(inByte);
-    gsReceive(inByte); //TODO: remove when soft serial is used
-  }
-  //TODO: implement setup on startup or interrup with org SoftSerial. NewSoftSerial diturbs receiver signal
-  /*if (gsSerial.available() > 0)
-  {
-    gsReceive(gsSerial.read());
-  }*/
-}
 
-/**
- * 50Hz Loop
- *
- * Used fore:
- * -IMU updates
- * -PID controll
- * -Thrust updates
- */
-void fastLoop(){
+  // ############################
+  // ######## Update IMU ########
+  // ############################
   imu.update();
   
-  mode = (receiver.getFlap() < RXCENTER) ? 0x00 : 0x10;
-  
-  throttle = receiver.getThro();
-  
-  //TODO: Check if failsafe works
-  //Failsafe (more than 500 millis sins last message from receiver)
-  if(receiver.getTimeSinceMessage() > 500) {
-    throttle = 0;
-  }
-  
-  if(throttle > config[CV_MIN_THRO_BYTE] * 4){
-    state = 0x30; //Airborne
+
+  // #####################################################
+  // ######## Update PID's and get output thrusts ########
+  // #####################################################
+  if(setPoint.throttle > config[CV_MIN_THRO_BYTE] * 4){
+    setState(STATE_AIRBORNE);
     
     //TODO: Refactor and implement stunt mode
-    //if(mode != 0x10){ //Hover Mode (IMU stabled)
-      rollOutput = rollHoverPID.updatePid(receiver.getAile(), map(imu.getRollDegree(), -180, 180, 0, 1023));
-      nickOutput = nickHoverPID.updatePid(receiver.getElev(), map(imu.getNickDegree(), -180, 180, 0, 1023));
+    //if(mode != MODE_STUNT){ //Hover or Position hold Mode (IMU stabled)
+      rollOutput = rollHoverPID.updatePid(setPoint.roll, map(imu.getRollDegree(), -180, 180, 0, 1023));
+      nickOutput = nickHoverPID.updatePid(setPoint.nick, map(imu.getNickDegree(), -180, 180, 0, 1023));
+      yawOutput = yawPID.updatePid(setPoint.yaw, map(imu.getYawDegree(), -180, 180, 0, 1023));
     /*} else { //Stunt Mode (Gyro stabled)
-      rollOutput = rollAcroPID.updatePid(receiver.getAile(), imu.getGyroRoll() + 511);
-      nickOutput = nickAcroPID.updatePid(receiver.getElev(), imu.getGyroNick() + 511);
+      rollOutput = rollAcroPID.updatePid(setPoint.roll, imu.getGyroRoll() + 511);
+      nickOutput = nickAcroPID.updatePid(setPoint.nick, imu.getGyroNick() + 511);
+      yawOutput = yawPID.updatePid(setPoint.yaw, map(imu.getGyroYawDegree(), -180, 180, 0, 1023));
     }*/
-    
-    yawOutput = yawPID.updatePid(receiver.getRudd(), map(imu.getYawDegree(), -180, 180, 0, 1023));
-  } else state = 0x10; //Armed
+
+  } else setState(STATE_READY);
   
   
-  mix.setThrust(throttle, rollOutput, nickOutput, yawOutput);
+  // #########################################
+  // ######## Update motors and servo ########
+  // #########################################
+  mix.setThrust(setPoint.throttle, rollOutput, nickOutput, yawOutput);
 }
 
 /**
- * Splits fast loop into 5 (10Hz each)
- * 
- * Used fore:
- * 0. TriGUI Copter data
- * 1. TriGUI Receiver data
- * 2. Happy Killmore attitude and TriGUI IMU data
- * 3. Happy Killmore location
- * 4. slow_loop()
+ * 100Hz Loop
  */
 void mediumLoop(){
-  //Each case at 10Hz
+  mediumLoopCount++;
+
+  // ###########################################
+  // ######## Read Serial from receiver ########
+  // ###########################################
+  if (Serial.available() > 0) {
+    inByte = Serial.read();
+    receiver.regByte(inByte);
+    if(state < STATE_AIRBORNE) gsReceive(inByte); //TODO: remove when soft serial is used
+  }
+
+
+  // Splits loop into 10 (10Hz each)
+  // Each case at 10Hz
   switch(mediumLoopCount) {
     case 0:
-      TriGUIsendCopter();
+    case 5:
+      // 20Hz
+      updateSetPoints();
       break;
     case 1:
-      TriGUIsendReceiver();
       break;
     case 2:
+      break;
+    case 3:
+      break;
+    case 4:
+      TriGUIsendCopter();
+      break;
+    case 6:
+      TriGUIsendReceiver();
+      break;
+    case 7:
       TriGUIsendIMU();
       HappyKillmoreSendAttitude();
       break;
-    case 3:
+    case 8:
       HappyKillmoreSendLocation();
       break;
-    case 4:
+    case 9:
       slowLoop();
-      break;
     default:
-      if(mediumLoopCount > 18) mediumLoopCount = -1;
+      mediumLoopCount = -1;
     
   }
   mediumLoopCount++;
@@ -265,8 +307,49 @@ void mediumLoop(){
  */
  //TODO: split in 5 (2 Hz) like medium loop
 void slowLoop(){
-  TriGUIsendMessage(0, "------------");
-  TriGUIsendMessage(0, String(millis()-fastLoopTimer));
-  TriGUIsendMessage(0, String(fastLoopCount));
   
+}
+
+
+void updateSetPoints(){
+  // only MODE_HOVER is implemented
+  mode = MODE_HOVER;
+  // if (receiver.getFlap() < RXCENTER)
+  //   mode = MODE_POSITION;
+  // else if(receiver.getGear() < RXCENTER)
+  //   mode = MODE_HOVER;
+  // else
+  //   mode = MODE_STUNT;
+
+  //TODO: Check if failsafe works
+  //Failsafe (more than 500 millis sins last message from receiver)
+  bool failsafe = 
+    receiver.getTimeSinceMessage() > 500 ||
+    state < STATE_READY ||
+    state >= STATE_ERROR;
+
+  switch (mode){
+    case MODE_HOVER:
+      if(failsafe) {
+        setPoint.throttle = 0;
+        setPoint.roll = RXCENTER;
+        setPoint.nick = RXCENTER;
+        setPoint.yaw = RXCENTER;
+      } else {
+        setPoint.throttle = receiver.getThro();
+        setPoint.roll = receiver.getAile();
+        setPoint.nick = receiver.getElev();
+        setPoint.yaw = receiver.getRudd();
+      }
+      break;
+
+    case MODE_STUNT:
+      //TODO: implement
+      break;
+
+    case MODE_POSITION:
+    default:
+      //TODO: implement
+      break;
+  }
 }

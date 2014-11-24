@@ -23,7 +23,7 @@ void TriGUIsendCopter(){
     //--------- Data --------------
     Serial.write(millis() / 10000); //time 0 - ca 45 min
     Serial.write(((receiver.getThro() > config[CV_MIN_THRO_BYTE] * 4)? 0x30 : 0x20));
-    Serial.write(mode);
+    Serial.write(0);
    
     //Motors and servo
     Serial.write(map(mix.getLeftThrust(), 0, 179, 0, 255));
