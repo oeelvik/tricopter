@@ -8,7 +8,7 @@
 
  Tricopter::Tricopter() : 
  		config(0), 
- 		groundStation(config, receiver, imu, output, mix)
+ 		groundStation(config, receiver, imu, setPoint, output, mix)
  		{
 	setState(STATE_CONFIG);
 
@@ -23,7 +23,7 @@
 
 void Tricopter::init(){
  	stopWatch.init(); //TODO:remove after benchmark test
-
+ 	stopWatch.split();
  	analogReference(EXTERNAL);
 	Serial.begin(115200);
 
@@ -39,6 +39,9 @@ void Tricopter::init(){
 	if(RESET_CONFIG == 1) config.reset();
 
 	reconfigure();
+	stopWatch.split();
+
+	groundStation.log("Configuration took: " + String(stopWatch.splitTimes[1]) + " micros");
 }
 
 
@@ -104,6 +107,19 @@ void Tricopter::reconfigure(){
  * Fastest running loop, initial loop timing and running realy fast tasks.
  */
 void Tricopter::fastLoop(){
+	// stopWatch.split();
+	// delay(10);
+	// stopWatch.split();
+
+	// Serial.println("Medium loop:" + String(stopWatch.splitTimes[1]));
+	// Serial.println("IMU:" + String(stopWatch.splitTimes[2]));
+	// Serial.println("PID:" + String(stopWatch.splitTimes[3]));
+	// Serial.println("Mix:" + String(stopWatch.splitTimes[4]));
+	// Serial.println("Loop:" + String(stopWatch.splitTimes[5]));
+	// Serial.println("delay(10):" + String(stopWatch.splitTimes[6]));
+	// stopWatch.clear();
+	// stopWatch.split();
+	
 	fastLoopCount ++;
 
 	//100 Hz Loop
@@ -113,26 +129,28 @@ void Tricopter::fastLoop(){
 		mediumLoop();
 	}
 
+	// stopWatch.split();
 	// ############################
 	// ######## Update IMU ########
 	// ############################
 	imu.update();
 
 
+	// stopWatch.split();
 	// #####################################################
 	// ######## Update PID's and get output thrusts ########
 	// #####################################################
+	output.throttle = setPoint.throttle;
 	if(setPoint.throttle > config.get(CV_MIN_THRO_BYTE) * 4){
 		setState(STATE_AIRBORNE);
 
 		//TODO: Refactor and implement stunt mode
 		//if(mode != MODE_STUNT){ //Hover or Position hold Mode (IMU stabled)
-			output.throttle = setPoint.throttle;
+			
 			output.roll = rollHoverPID.updatePid(setPoint.roll, map(imu.getRollDegree(), -180, 180, 0, 1023));
 			output.nick = nickHoverPID.updatePid(setPoint.nick, map(imu.getNickDegree(), -180, 180, 0, 1023));
 			output.yaw = yawHoverPID.updatePid(setPoint.yaw, map(imu.getYawDegree(), -180, 180, 0, 1023));
 		/*} else { //Stunt Mode (Gyro stabled)
-			output.throttle = setPoint.throttle;
 			output.roll = rollAcroPID.updatePid(setPoint.roll, imu.getGyroRoll() + 511);
 			output.nick = nickAcroPID.updatePid(setPoint.nick, imu.getGyroNick() + 511);
 			output.yaw = yawAcroPID.updatePid(setPoint.yaw, map(imu.getGyroYawDegree(), -180, 180, 0, 1023));
@@ -140,11 +158,13 @@ void Tricopter::fastLoop(){
 
 	} else setState(STATE_READY);
 
-
+	// stopWatch.split();
 	// #########################################
 	// ######## Update motors and servo ########
 	// #########################################
 	mix.setThrust(output.throttle, output.roll, output.nick, output.yaw);
+
+	// stopWatch.split();
 }
 
 
@@ -179,6 +199,13 @@ void Tricopter::mediumLoop(){
 			}
 			break;
 	    case 2:
+	    	// stopWatch.split();
+	    	// groundStation.log("StopWatch times:");
+	    	// for(int i = 0; i < stopWatch.index; i++){
+	    	// 	groundStation.log(String(stopWatch.splitTimes[i]));
+	    	// }
+	    	// stopWatch.clear();
+	    	// stopWatch.split();
 			break;
 	    case 3:
 			groundStation.sendCopter();
@@ -199,9 +226,7 @@ void Tricopter::mediumLoop(){
 			slowLoop();
 	    default:
 			mediumLoopCount = -1;
-	    
 	}
-	mediumLoopCount++;
 }
 
 

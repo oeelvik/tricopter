@@ -28,7 +28,7 @@
 
 class GroundStation {
 public:
-	GroundStation(Configuration& config, SatelliteReceive& receiver, IMURazor& imu, Directions& output, Mixer& mix);
+	GroundStation(Configuration& config, SatelliteReceive& receiver, IMURazor& imu, Directions& setPoint, Directions& output, Mixer& mix);
 
 	void regByte(byte inByte);
 
@@ -54,6 +54,7 @@ private:
 	Configuration& config;
 	SatelliteReceive& receiver;
 	IMURazor& imu;
+	Directions& setPoint;
 	Directions& output;
 	Mixer& mix;
 

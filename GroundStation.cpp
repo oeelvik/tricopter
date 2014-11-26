@@ -4,11 +4,13 @@ GroundStation::GroundStation(
 		Configuration& config, 
 		SatelliteReceive& receiver, 
 		IMURazor& imu, 
-		Directions& output, 
+    Directions& setPoint,
+    Directions& output, 
 		Mixer& mix) : 
 			config(config), 
 			receiver(receiver), 
 			imu(imu), 
+      setPoint(setPoint), 
 			output(output), 
 			mix(mix){
 				
@@ -39,10 +41,10 @@ void GroundStation::regByte(byte inByte){
 				data[receivedByteCount - 6] == (byte)'*' && 
 				data[receivedByteCount - 7] == (byte)'*')) {
 
-				inMessage = false;
-				receivedByteCount = 0;
-
 				executeCommand(CMD, data);
+
+        inMessage = false;
+        receivedByteCount = 0;
 			}
 		}
 	}
@@ -100,10 +102,10 @@ void GroundStation::sendReceiver(){
     Serial.write(3); //CMD receiver
     
     //Signal
-    Serial.write(receiver.getThro() / 4);
-    Serial.write(receiver.getAile() / 4);
-    Serial.write(receiver.getElev() / 4);
-    Serial.write(receiver.getRudd() / 4);
+    Serial.write(setPoint.throttle / 4);//receiver.getThro() / 4);
+    Serial.write(setPoint.roll / 4);//receiver.getAile() / 4);
+    Serial.write(setPoint.nick / 4);//receiver.getElev() / 4);
+    Serial.write(setPoint.yaw / 4);//receiver.getRudd() / 4);
     Serial.write(receiver.getGear() / 4);
     Serial.write(receiver.getFlap() / 4);
     
@@ -203,7 +205,7 @@ void GroundStation::executeCommand(byte CMD, byte data[]){
       sendConfig();
       break;
     case 6: //setConfig
-      if(receivedByteCount - 4 == CV_END_BYTE + 1){
+      if(receivedByteCount - 7 == CV_END_BYTE + 1){
         log("Configuration received by tricopter");
         config.set(data);
       } else error("Byte count Missmatch");
