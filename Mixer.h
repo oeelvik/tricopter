@@ -13,7 +13,8 @@ class Mixer{
   public:
     Mixer();
     void init();
-    void setMinESC(int val);
+    void setArmESC(int val);
+    void setIdleSpin(int val);
     void setMinThro(int val);
     void setYawRev(bool val);
     void setMotorsEnabled(bool val);
@@ -25,7 +26,9 @@ class Mixer{
     int getRearThrust();
     int getYawPos();
   
+    bool armed;
   private:
+
     Motors motors;
     
     int leftThrust;
@@ -33,7 +36,8 @@ class Mixer{
     int rearThrust;
     int yawPos;
     
-    int minESC;
+    int armESC;
+    int idleSpin;
     int minThro;
     bool motorsEnabled;
     bool yawRev;

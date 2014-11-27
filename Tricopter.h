@@ -30,11 +30,12 @@
 #define MODE_HOVER 1 //IMU stabilized Receiver setpoint
 #define MODE_STUNT 2 //GYRO stabilized Receiver setpoint
 
-#define STATE_OFF 0x00
+
+#define STATE_ERROR 0x00
 #define STATE_CONFIG 0x20
 #define STATE_READY 0x40
-#define STATE_AIRBORNE 0x60
-#define STATE_ERROR 0xA0
+#define STATE_ARMED 0x60
+#define STATE_AIRBORNE 0x80
 
 
 class Tricopter {
@@ -48,7 +49,7 @@ public:
 	void mediumLoop();
 	void slowLoop();
 
-	void setState(byte state);
+	bool setState(byte state);
 	void updateSetPoints();
 
 

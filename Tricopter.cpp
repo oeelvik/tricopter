@@ -8,9 +8,9 @@
 
  Tricopter::Tricopter() : 
  		config(0), 
- 		groundStation(config, receiver, imu, setPoint, output, mix)
+ 		groundStation(config, receiver, imu, setPoint, output, mix),
+ 		state(STATE_CONFIG)
  		{
-	setState(STATE_CONFIG);
 
  	mode = MODE_POSITION;
 
@@ -23,7 +23,6 @@
 
 void Tricopter::init(){
  	stopWatch.init(); //TODO:remove after benchmark test
- 	stopWatch.split();
  	analogReference(EXTERNAL);
 	Serial.begin(115200);
 
@@ -39,14 +38,11 @@ void Tricopter::init(){
 	if(RESET_CONFIG == 1) config.reset();
 
 	reconfigure();
-	stopWatch.split();
-
-	groundStation.log("Configuration took: " + String(stopWatch.splitTimes[1]) + " micros");
 }
 
 
 void Tricopter::reconfigure(){
-	setState(STATE_CONFIG);
+	if(!setState(STATE_CONFIG)) return;
 
 	groundStation.log("Setting configuration");
 
@@ -55,7 +51,9 @@ void Tricopter::reconfigure(){
 	receiver.setReversing( (bitRead(reversing,CV_RX_THRO_REV_BIT )==1), (bitRead(reversing,CV_RX_AILE_REV_BIT )==1), (bitRead(reversing,CV_RX_ELEV_REV_BIT )==1), (bitRead(reversing,CV_RX_RUDD_REV_BIT )==1), (bitRead(reversing,CV_RX_GEAR_REV_BIT )==1), (bitRead(reversing,CV_RX_FLAP_REV_BIT )==1));
 
 	//Setup Mixer
-	mix.setMinESC(map(config.get(CV_MIN_ESC_BYTE), 0, 255, 0, 250));
+	mix.setArmESC(map(config.get(CV_MIN_ESC_BYTE), 0, 255, 0, 250));
+	//TODO: implement separate config for this
+	mix.setIdleSpin(map(config.get(CV_MIN_ESC_BYTE), 0, 255, 0, 250) + 30);
 	mix.setMinThro(map(config.get(CV_MIN_THRO_BYTE), 0, 255, 0, 1023));
 	mix.setYawRev((bitRead(config.get(CV_TRICOPTER_ENABLE_BYTE), CV_YAW_SERVO_REV_BIT) == 1));
 	mix.setMotorsEnabled((bitRead(config.get(CV_TRICOPTER_ENABLE_BYTE), CV_MOTORS_ENABLE_BIT) == 1));
@@ -99,8 +97,6 @@ void Tricopter::reconfigure(){
 	imu.init();
 
 	config.dirty = false;
-
-	setState(STATE_READY);
 }
 
 
@@ -142,8 +138,7 @@ void Tricopter::fastLoop(){
 	// ######## Update PID's and get output thrusts ########
 	// #####################################################
 	output.throttle = setPoint.throttle;
-	if(setPoint.throttle > config.get(CV_MIN_THRO_BYTE) * 4){
-		setState(STATE_AIRBORNE);
+	if(setPoint.throttle > config.get(CV_MIN_THRO_BYTE) * 4 and setState(STATE_AIRBORNE)){
 
 		//TODO: Refactor and implement stunt mode
 		//if(mode != MODE_STUNT){ //Hover or Position hold Mode (IMU stabled)
@@ -157,7 +152,7 @@ void Tricopter::fastLoop(){
 			output.yaw = yawAcroPID.updatePid(setPoint.yaw, map(imu.getGyroYawDegree(), -180, 180, 0, 1023));
 		}*/
 
-	} else setState(STATE_READY);
+	} else if(state == STATE_AIRBORNE) setState(STATE_ARMED);
 
 	// stopWatch.split();
 	// #########################################
@@ -195,8 +190,14 @@ void Tricopter::mediumLoop(){
 			updateSetPoints();
 			break;
 	    case 1:
-			if(state < STATE_AIRBORNE && config.dirty) {
+			if(config.dirty) {
 				reconfigure();
+			} 
+			//ARM 
+			if(receiver.getGear() > RXCENTER and setState(STATE_ARMED)) {
+				mix.armed = true;
+			} else if(receiver.getGear() < RXCENTER and setState(STATE_READY)) {
+				mix.armed = false;
 			}
 			break;
 	    case 2:
@@ -241,27 +242,54 @@ void Tricopter::slowLoop(){
   
 }
 
+bool Tricopter::setState(byte state){
+	if(state == this->state) return true;
 
-void Tricopter::setState(byte state){
-  this->state = state;
-  //TODO: implement status lights
-  // switch (state) {
-  //     case STATE_OFF:
-  //       // do something
-  //       break;
-  //     case STATE_CONFIG:
-  //       // do something
-  //       break;
-  //     case STATE_READY:
-  //       // do something
-  //       break;
-  //     case STATE_AIRBORNE:
-  //       // do something
-  //       break;
-  //     case STATE_ERROR:
-  //     default:
-  //       // do something
-  //}
+	//TODO: implement status lights
+	switch (state) {
+		case STATE_CONFIG:
+
+			if(
+					this->state != STATE_READY &&
+					this->state != STATE_ARMED)
+				return false;
+
+			groundStation.log("STATE_CONFIG");
+			break;
+		case STATE_READY:
+
+			if(
+					this->state != STATE_CONFIG &&
+					this->state != STATE_ARMED)
+				return false;
+
+			groundStation.log("STATE_READY");
+			break;
+		case STATE_ARMED:
+
+			if(
+					this->state != STATE_READY &&
+					this->state != STATE_AIRBORNE)
+				return false;
+
+			groundStation.log("STATE_ARMED");
+			break;
+		case STATE_AIRBORNE:
+		
+			if(
+					this->state != STATE_ARMED)
+				return false;
+
+			groundStation.log("STATE_AIRBORNE");
+			break;
+		case STATE_ERROR:
+		default:
+			groundStation.log("STATE_ERROR");
+	}
+
+	this->state = state;
+
+	return true;
 }
 
 
@@ -278,9 +306,7 @@ void Tricopter::updateSetPoints(){
 	//TODO: Check if failsafe works
 	//Failsafe (more than 500 millis sins last message from receiver)
 	bool failsafe = 
-		receiver.getTimeSinceMessage() > 500 ||
-		state < STATE_READY ||
-		state >= STATE_ERROR;
+		receiver.getTimeSinceMessage() > 500;
 
 	switch (mode){
 	case MODE_HOVER:
