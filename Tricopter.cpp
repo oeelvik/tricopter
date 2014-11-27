@@ -194,7 +194,8 @@ void Tricopter::mediumLoop(){
 				reconfigure();
 			} 
 			//ARM 
-			if(receiver.getGear() > RXCENTER and setState(STATE_ARMED)) {
+			if(receiver.getGear() > RXCENTER and state == STATE_READY) {
+				setState(STATE_ARMED);
 				mix.armed = true;
 			} else if(receiver.getGear() < RXCENTER and setState(STATE_READY)) {
 				mix.armed = false;
@@ -314,12 +315,20 @@ void Tricopter::updateSetPoints(){
 			setPoint.throttle = 0;
 			setPoint.roll = RXCENTER;
 			setPoint.nick = RXCENTER;
-			setPoint.yaw = RXCENTER;
+			setPoint.yaw = map(imu.getYawDegree(), -180, 180, 0, 1023);
 		} else {
+
 			setPoint.throttle = receiver.getThro();
-			setPoint.roll = receiver.getAile();
-			setPoint.nick = receiver.getElev();
-			setPoint.yaw = receiver.getRudd();
+			
+			//roll and nick scaled to ca 30 degree max setpoint angle 
+			setPoint.roll = map(receiver.getAile(), RXMIN, RXMAX, RXCENTER - 85, RXCENTER + 85);
+			setPoint.nick = map(receiver.getElev(), RXMIN, RXMAX, RXCENTER - 85, RXCENTER + 85);
+
+			//use rudd to increment setpoint when airborn
+			if(state < STATE_AIRBORNE) {
+				setPoint.yaw = map(imu.getYawDegree(), -180, 180, 0, 1023);
+			}
+			setPoint.yaw += map(receiver.getRudd(), RXMIN, RXMAX, -15, +15);
 		}
 		break;
 
