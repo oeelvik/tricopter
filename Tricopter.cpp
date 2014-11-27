@@ -55,20 +55,21 @@ void Tricopter::reconfigure(){
 	receiver.setReversing( (bitRead(reversing,CV_RX_THRO_REV_BIT )==1), (bitRead(reversing,CV_RX_AILE_REV_BIT )==1), (bitRead(reversing,CV_RX_ELEV_REV_BIT )==1), (bitRead(reversing,CV_RX_RUDD_REV_BIT )==1), (bitRead(reversing,CV_RX_GEAR_REV_BIT )==1), (bitRead(reversing,CV_RX_FLAP_REV_BIT )==1));
 
 	//Setup Mixer
-	mix.setMinESC(map(config.get(CV_MIN_ESC_BYTE), 0, 255, 0, 179));
+	mix.setMinESC(map(config.get(CV_MIN_ESC_BYTE), 0, 255, 0, 250));
 	mix.setMinThro(map(config.get(CV_MIN_THRO_BYTE), 0, 255, 0, 1023));
 	mix.setYawRev((bitRead(config.get(CV_TRICOPTER_ENABLE_BYTE), CV_YAW_SERVO_REV_BIT) == 1));
 	mix.setMotorsEnabled((bitRead(config.get(CV_TRICOPTER_ENABLE_BYTE), CV_MOTORS_ENABLE_BIT) == 1));
 	mix.setPins(config.get(CV_LEFT_MOTOR_PIN_BYTE), config.get(CV_RIGHT_MOTOR_PIN_BYTE), config.get(CV_REAR_MOTOR_PIN_BYTE), config.get(CV_YAW_SERVO_PIN_BYTE));
+	mix.init();
 
 	//Setup PID
-	rollHoverPID.setTunings((float)config.get(CV_HOVER_PID_KP_BYTE) / 25, (float)config.get(CV_HOVER_PID_KI_BYTE) / 25500, (float)config.get(CV_HOVER_PID_KD_BYTE) / 25);
-	nickHoverPID.setTunings((float)config.get(CV_HOVER_PID_KP_BYTE) / 25, (float)config.get(CV_HOVER_PID_KI_BYTE) / 25500, (float)config.get(CV_HOVER_PID_KD_BYTE) / 25);
-	yawHoverPID.setTunings((float)config.get(CV_YAW_PID_KP_BYTE) / 25, (float)config.get(CV_YAW_PID_KI_BYTE) / 25500, (float)config.get(CV_YAW_PID_KD_BYTE) / 25);
+	rollHoverPID.setTunings((float)config.get(CV_HOVER_PID_KP_BYTE) / 25, (float)config.get(CV_HOVER_PID_KI_BYTE) / 25500, (float)config.get(CV_HOVER_PID_KD_BYTE) / 10);
+	nickHoverPID.setTunings((float)config.get(CV_HOVER_PID_KP_BYTE) / 25, (float)config.get(CV_HOVER_PID_KI_BYTE) / 25500, (float)config.get(CV_HOVER_PID_KD_BYTE) / 10);
+	yawHoverPID.setTunings((float)config.get(CV_YAW_PID_KP_BYTE) / 25, (float)config.get(CV_YAW_PID_KI_BYTE) / 25500, (float)config.get(CV_YAW_PID_KD_BYTE) / 10);
 
-	rollAcroPID.setTunings((float)config.get(CV_HOVER_PID_KP_BYTE) / 25, (float)config.get(CV_HOVER_PID_KI_BYTE) / 25500, (float)config.get(CV_HOVER_PID_KD_BYTE) / 25);
-	nickAcroPID.setTunings((float)config.get(CV_HOVER_PID_KP_BYTE) / 25, (float)config.get(CV_HOVER_PID_KI_BYTE) / 25500, (float)config.get(CV_HOVER_PID_KD_BYTE) / 25);
-	yawAcroPID.setTunings((float)config.get(CV_YAW_PID_KP_BYTE) / 25, (float)config.get(CV_YAW_PID_KI_BYTE) / 25500, (float)config.get(CV_YAW_PID_KD_BYTE) / 25);
+	rollAcroPID.setTunings((float)config.get(CV_HOVER_PID_KP_BYTE) / 25, (float)config.get(CV_HOVER_PID_KI_BYTE) / 25500, (float)config.get(CV_HOVER_PID_KD_BYTE) / 10);
+	nickAcroPID.setTunings((float)config.get(CV_HOVER_PID_KP_BYTE) / 25, (float)config.get(CV_HOVER_PID_KI_BYTE) / 25500, (float)config.get(CV_HOVER_PID_KD_BYTE) / 10);
+	yawAcroPID.setTunings((float)config.get(CV_YAW_PID_KP_BYTE) / 25, (float)config.get(CV_YAW_PID_KI_BYTE) / 25500, (float)config.get(CV_YAW_PID_KD_BYTE) / 10);
 
 	//Setup IMU
 	imu.setAccelWeight((float)config.get(CV_IMU_ACC_WEIGHT_BYTE) / 100);

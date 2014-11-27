@@ -1,6 +1,5 @@
 //TODO: Use software serial for communication with the compeuter
 
-#include <Servo.h>
 #include <SatelliteReceive.h>
 #include <IMURazor.h>
 #include <StopWatch.h> //TODO:remove after benchmark test

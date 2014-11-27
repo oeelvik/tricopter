@@ -7,15 +7,17 @@
   #include "WProgram.h"
 #endif
 
-#include <Servo.h>
+#include "Motors.h"
 
 class Mixer{
   public:
     Mixer();
+    void init();
     void setMinESC(int val);
     void setMinThro(int val);
     void setYawRev(bool val);
     void setMotorsEnabled(bool val);
+    //TODO: remove or implement (deprecated)
     void setPins(int left, int right, int rear, int yaw);
     void setThrust(int throttle, int roll, int nick, int yaw );
     int getLeftThrust();
@@ -24,10 +26,7 @@ class Mixer{
     int getYawPos();
   
   private:
-    Servo yawServo;
-    Servo rearMotor;
-    Servo rightMotor;
-    Servo leftMotor;
+    Motors motors;
     
     int leftThrust;
     int rightThrust;

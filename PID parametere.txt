@@ -1,0 +1,7 @@
+PID parametere
+
+		GUI:	Skala:
+H KP:	45		/ 25
+H KI:	35		/ 25500
+H KD:	234		/ 10
+D skal nok fortsatt noe opp muligens ned med P I usikker
