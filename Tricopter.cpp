@@ -145,7 +145,7 @@ void Tricopter::fastLoop(){
 			
 			output.roll = rollHoverPID.updatePid(setPoint.roll, map(imu.getRollDegree(), -180, 180, 0, 1023));
 			output.nick = nickHoverPID.updatePid(setPoint.nick, map(imu.getNickDegree(), -180, 180, 0, 1023));
-			output.yaw = yawHoverPID.updatePid(setPoint.yaw, map(imu.getYawDegree(), -180, 180, 0, 1023));
+			output.yaw = yawHoverPID.updatePid(setPoint.yaw, map(imu.getYawRotation() * 10000, -600, 600, 0, 1023));
 		/*} else { //Stunt Mode (Gyro stabled)
 			output.roll = rollAcroPID.updatePid(setPoint.roll, imu.getGyroRoll() + 511);
 			output.nick = nickAcroPID.updatePid(setPoint.nick, imu.getGyroNick() + 511);
@@ -315,20 +315,16 @@ void Tricopter::updateSetPoints(){
 			setPoint.throttle = 0;
 			setPoint.roll = RXCENTER;
 			setPoint.nick = RXCENTER;
-			setPoint.yaw = map(imu.getYawDegree(), -180, 180, 0, 1023);
+			setPoint.yaw = RXCENTER;
 		} else {
 
 			setPoint.throttle = receiver.getThro();
+			setPoint.yaw = receiver.getRudd();
 
 			//roll and nick scaled to ca 30 degree max setpoint angle 
 			setPoint.roll = map(receiver.getAile(), RXMIN, RXMAX, RXCENTER - 85, RXCENTER + 85);
 			setPoint.nick = map(receiver.getElev(), RXMIN, RXMAX, RXCENTER - 85, RXCENTER + 85);
-
-			//use rudd to increment setpoint when airborn
-			if(state < STATE_AIRBORNE) {
-				setPoint.yaw = map(imu.getYawDegree(), -180, 180, 0, 1023);
-			}
-			setPoint.yaw += map(receiver.getRudd(), RXMIN, RXMAX, -15, +15);
+			
 		}
 		break;
 
