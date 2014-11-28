@@ -60,7 +60,7 @@ void Mixer::setThrust(int throttle, int roll, int nick, int yaw ){
     
     //added yaw angle devided by some constant to compensate for vertical thrust loss
     //TODO: adjust constant deviding yaw
-    rearThrust = constrain(map(throttle - nick + (abs(yaw) / 4), 0, 1024, 0, 250), idleSpin, 250);
+    rearThrust = constrain(map(throttle - nick + (abs(yaw) / 16), 0, 1024, 0, 250), idleSpin, 250);
     
     //yaw servo angle
     if(yawRev) yawPos = constrain(map(yaw, -1023, 1023, 250, 0), 0, 250);

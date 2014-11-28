@@ -36,7 +36,7 @@ void Configuration::reset(){
 	config[CV_REAR_MOTOR_PIN_BYTE] = 9;
 	config[CV_YAW_SERVO_PIN_BYTE] = 3;
 	config[CV_MIN_THRO_BYTE] = 50; // minThro = val * 4
-	config[CV_MIN_ESC_BYTE] = 38; // minESC = val * 1.416667 eller map(val, 0, 255, 0, 179)  //38
+	config[CV_MIN_ESC_BYTE] = 22; // minESC = val * 1.416667 eller map(val, 0, 255, 0, 179)  //38
 	config[CV_HOVER_PID_KP_BYTE] = 20; // Kp = var / 25 (0-10.2)  //17
 	config[CV_HOVER_PID_KI_BYTE] = 5; //Ki = var / 255 (0-1)      //7
 	config[CV_HOVER_PID_KD_BYTE] = 180; //Kp = var / 25 (0-10.2)  //165

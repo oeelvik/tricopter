@@ -9,6 +9,9 @@
  * http://www.instructables.com/id/RC-Quadrotor-Helicopter/step13/Arduino-Demo-PWM-Output/
  * arduino Servo lib
  * http://robots.dacloughb.com/project-3/quadcopter-software/motor-control/
+ * https://github.com/2012SEng466/copter/blob/254ffeab74c9f0b5ef600415e1472f9756c2ecc5/Aero_Quad_X/Libraries/AQ_Motors/Motors_PWM_Timer.h
+ * https://sites.google.com/site/qeewiki/books/avr-guide/pwm-on-the-atmega328
+ * 
  */
 
 #ifndef MOTORS_H_

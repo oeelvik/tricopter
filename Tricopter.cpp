@@ -61,13 +61,13 @@ void Tricopter::reconfigure(){
 	mix.init();
 
 	//Setup PID
-	rollHoverPID.setTunings((float)config.get(CV_HOVER_PID_KP_BYTE) / 25, (float)config.get(CV_HOVER_PID_KI_BYTE) / 25500, (float)config.get(CV_HOVER_PID_KD_BYTE) / 10);
-	nickHoverPID.setTunings((float)config.get(CV_HOVER_PID_KP_BYTE) / 25, (float)config.get(CV_HOVER_PID_KI_BYTE) / 25500, (float)config.get(CV_HOVER_PID_KD_BYTE) / 10);
-	yawHoverPID.setTunings((float)config.get(CV_YAW_PID_KP_BYTE) / 25, (float)config.get(CV_YAW_PID_KI_BYTE) / 25500, (float)config.get(CV_YAW_PID_KD_BYTE) / 10);
+	rollHoverPID.setTunings((float)config.get(CV_HOVER_PID_KP_BYTE) / 25, (float)config.get(CV_HOVER_PID_KI_BYTE) / 25500, (float)config.get(CV_HOVER_PID_KD_BYTE) / 2);
+	nickHoverPID.setTunings((float)config.get(CV_HOVER_PID_KP_BYTE) / 25, (float)config.get(CV_HOVER_PID_KI_BYTE) / 25500, (float)config.get(CV_HOVER_PID_KD_BYTE) / 2);
+	yawHoverPID.setTunings((float)config.get(CV_YAW_PID_KP_BYTE) / 25, (float)config.get(CV_YAW_PID_KI_BYTE) / 25500, (float)config.get(CV_YAW_PID_KD_BYTE) / 2);
 
-	rollAcroPID.setTunings((float)config.get(CV_HOVER_PID_KP_BYTE) / 25, (float)config.get(CV_HOVER_PID_KI_BYTE) / 25500, (float)config.get(CV_HOVER_PID_KD_BYTE) / 10);
-	nickAcroPID.setTunings((float)config.get(CV_HOVER_PID_KP_BYTE) / 25, (float)config.get(CV_HOVER_PID_KI_BYTE) / 25500, (float)config.get(CV_HOVER_PID_KD_BYTE) / 10);
-	yawAcroPID.setTunings((float)config.get(CV_YAW_PID_KP_BYTE) / 25, (float)config.get(CV_YAW_PID_KI_BYTE) / 25500, (float)config.get(CV_YAW_PID_KD_BYTE) / 10);
+	rollAcroPID.setTunings((float)config.get(CV_HOVER_PID_KP_BYTE) / 25, (float)config.get(CV_HOVER_PID_KI_BYTE) / 25500, (float)config.get(CV_HOVER_PID_KD_BYTE) / 2);
+	nickAcroPID.setTunings((float)config.get(CV_HOVER_PID_KP_BYTE) / 25, (float)config.get(CV_HOVER_PID_KI_BYTE) / 25500, (float)config.get(CV_HOVER_PID_KD_BYTE) / 2);
+	yawAcroPID.setTunings((float)config.get(CV_YAW_PID_KP_BYTE) / 25, (float)config.get(CV_YAW_PID_KI_BYTE) / 25500, (float)config.get(CV_YAW_PID_KD_BYTE) / 2);
 
 	//Setup IMU
 	imu.setAccelWeight((float)config.get(CV_IMU_ACC_WEIGHT_BYTE) / 100);
@@ -319,7 +319,7 @@ void Tricopter::updateSetPoints(){
 		} else {
 
 			setPoint.throttle = receiver.getThro();
-			
+
 			//roll and nick scaled to ca 30 degree max setpoint angle 
 			setPoint.roll = map(receiver.getAile(), RXMIN, RXMAX, RXCENTER - 85, RXCENTER + 85);
 			setPoint.nick = map(receiver.getElev(), RXMIN, RXMAX, RXCENTER - 85, RXCENTER + 85);

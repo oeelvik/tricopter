@@ -5,3 +5,34 @@ H KP:	45		/ 25
 H KI:	35		/ 25500
 H KD:	234		/ 10
 D skal nok fortsatt noe opp muligens ned med P I usikker
+
+		GUI:	Skala:
+H KP:	45		/ 25
+H KI:	35		/ 25500
+H KD:	45		/ 2
+D skal nok fortsatt noe opp muligens ned med P I usikker
+
+
+		GUI:	Skala:
+H KP:	33		/ 25
+H KI:	229		/ 25500
+H KD:	79		/ 2
+Fåreløpig beste instillinger P drar ikke helt inn til setpoint, men høyere blir veldig vinglete i drar inn etter relativt kort tid
+Muligens for treg respons til bruk med gps
+
+
+
+
+
+		GUI:	Skala:
+H KP:	30		/ 25
+H KI:	229		/ 25500
+H KD:	119		/ 2
+
+
+		GUI:	Skala:
+Y KP:	25		/ 25
+Y KI:	56		/ 25500
+Y KD:	89		/ 2
+
+Foreløpig beste når testet på rearmotor med både yaw og nick
