@@ -17,7 +17,6 @@ class Mixer{
     void setIdleSpin(int val);
     void setMinThro(int val);
     void setYawRev(bool val);
-    void setMotorsEnabled(bool val);
     //TODO: remove or implement (deprecated)
     void setPins(int left, int right, int rear, int yaw);
     void setThrust(int throttle, int roll, int nick, int yaw );
@@ -39,7 +38,6 @@ class Mixer{
     int armESC;
     int idleSpin;
     int minThro;
-    bool motorsEnabled;
     bool yawRev;
     
 };

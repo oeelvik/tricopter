@@ -14,7 +14,7 @@
 
  	mode = MODE_POSITION;
 
- 	setPoint.throttle = 0;
+ 	setPoint.vertical = 0;
  	setPoint.roll = RXCENTER;
  	setPoint.nick = RXCENTER;
  	setPoint.yaw = RXCENTER;
@@ -37,6 +37,15 @@ void Tricopter::init(){
 	//Reset configuration
 	if(RESET_CONFIG == 1) config.reset();
 
+	//Setup datastreaming
+	TricopterStream::receiver = &receiver;
+	TricopterStream::setPoint = &setPoint;
+	TricopterStream::imu = &imu;
+	TricopterStream::output = &output;
+	TricopterStream::mix = &mix;
+	TricopterStream::attachAll(&dataStream);
+
+	//Configure
 	reconfigure();
 }
 
@@ -56,7 +65,6 @@ void Tricopter::reconfigure(){
 	mix.setIdleSpin(map(config.get(CV_MIN_ESC_BYTE), 0, 255, 0, 250) + 30);
 	mix.setMinThro(map(config.get(CV_MIN_THRO_BYTE), 0, 255, 0, 1023));
 	mix.setYawRev((bitRead(config.get(CV_TRICOPTER_ENABLE_BYTE), CV_YAW_SERVO_REV_BIT) == 1));
-	mix.setMotorsEnabled((bitRead(config.get(CV_TRICOPTER_ENABLE_BYTE), CV_MOTORS_ENABLE_BIT) == 1));
 	mix.setPins(config.get(CV_LEFT_MOTOR_PIN_BYTE), config.get(CV_RIGHT_MOTOR_PIN_BYTE), config.get(CV_REAR_MOTOR_PIN_BYTE), config.get(CV_YAW_SERVO_PIN_BYTE));
 	mix.init();
 
@@ -137,8 +145,8 @@ void Tricopter::fastLoop(){
 	// #####################################################
 	// ######## Update PID's and get output thrusts ########
 	// #####################################################
-	output.throttle = setPoint.throttle;
-	if(setPoint.throttle > config.get(CV_MIN_THRO_BYTE) * 4 and setState(STATE_AIRBORNE)){
+	output.vertical = setPoint.vertical;
+	if(setPoint.vertical > config.get(CV_MIN_THRO_BYTE) * 4 and setState(STATE_AIRBORNE)){
 
 		//TODO: Refactor and implement stunt mode
 		//if(mode != MODE_STUNT){ //Hover or Position hold Mode (IMU stabled)
@@ -158,7 +166,7 @@ void Tricopter::fastLoop(){
 	// #########################################
 	// ######## Update motors and servo ########
 	// #########################################
-	mix.setThrust(output.throttle, output.roll, output.nick, output.yaw);
+	mix.setThrust(output.vertical, output.roll, output.nick, output.yaw);
 
 	// stopWatch.split();
 }
@@ -312,13 +320,13 @@ void Tricopter::updateSetPoints(){
 	switch (mode){
 	case MODE_HOVER:
 		if(failsafe) {
-			setPoint.throttle = 0;
+			setPoint.vertical = 0;
 			setPoint.roll = RXCENTER;
 			setPoint.nick = RXCENTER;
 			setPoint.yaw = RXCENTER;
 		} else {
 
-			setPoint.throttle = receiver.getThro();
+			setPoint.vertical = receiver.getThro();
 			setPoint.yaw = receiver.getRudd();
 
 			//roll and nick scaled to ca 30 degree max setpoint angle 

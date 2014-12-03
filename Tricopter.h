@@ -18,6 +18,8 @@
 
 #include <Configuration.h>
 #include <GroundStation.h>
+#include <DataStream.h>
+#include <TricopterStream.h>
 #include <Directions.h>
 #include <Mixer.h>
 #include <PID.h>
@@ -59,6 +61,7 @@ private:
 
 	Configuration config;
 	GroundStation groundStation;
+	DataStream dataStream;
 
 	unsigned long fastLoopCount;
 	unsigned long mediumLoopStartTime;

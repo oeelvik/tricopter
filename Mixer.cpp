@@ -27,9 +27,7 @@ void Mixer::setMinThro(int val){
 void Mixer::setYawRev(bool val){
   yawRev = val;
 }
-void Mixer::setMotorsEnabled(bool val){
-  motorsEnabled = val;
-}
+
 void Mixer::setPins(int left, int right, int rear, int yaw){
 }
 
@@ -41,7 +39,7 @@ void Mixer::setPins(int left, int right, int rear, int yaw){
  * @param int yaw Desired yaw torque (-1023 <  > 1023)
  */
 void Mixer::setThrust(int throttle, int roll, int nick, int yaw ){
-  if(!motorsEnabled or !armed){
+  if(!armed){
     leftThrust = armESC;
     rightThrust = armESC;
     rearThrust = armESC;

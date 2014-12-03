@@ -7,7 +7,7 @@
 #define DIRECTIONS_H_
 
 struct Directions {
-  int throttle;
+  int vertical;
   int roll;
   int nick;
   int yaw;

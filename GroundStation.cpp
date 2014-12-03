@@ -102,7 +102,7 @@ void GroundStation::sendReceiver(){
     Serial.write(3); //CMD receiver
     
     //Signal
-    Serial.write(setPoint.throttle / 4);//receiver.getThro() / 4);
+    Serial.write(setPoint.vertical / 4);//receiver.getThro() / 4);
     Serial.write(setPoint.roll / 4);//receiver.getAile() / 4);
     Serial.write(setPoint.nick / 4);//receiver.getElev() / 4);
     Serial.write(setPoint.yaw / 4);//receiver.getRudd() / 4);
@@ -188,8 +188,6 @@ void GroundStation::happyKillmoreSendLocation(){
     Serial.println(",***"); //suffix
   }
 }
-
-
 
 void GroundStation::sendMessage(byte type, String message){
     Serial.print(">>>"); //Prefix
