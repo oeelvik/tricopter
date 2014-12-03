@@ -3,7 +3,6 @@
 //------------ Tricopter --------------
 #define CV_TRICOPTER_ENABLE_BYTE 0 //Address to byte containing boolean bits
   #define CV_YAW_SERVO_REV_BIT 1
-  #define CV_PID_ENABLE_BIT 3
   #define CV_HK_ENABLE_BIT 6
   #define CV_TRIGUI_ENABLE_BIT 7
 #define CV_LEFT_MOTOR_PIN_BYTE 1
