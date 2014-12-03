@@ -76,11 +76,11 @@ private:
 
 	PID rollHoverPID;
 	PID nickHoverPID;
-	PID yawHoverPID;
 
 	PID rollAcroPID;
 	PID nickAcroPID;
-	PID yawAcroPID;
+
+	PID yawPID;
 
 	Mixer mix;
 

@@ -29,10 +29,9 @@ void Tricopter::init(){
 	//Set PID limits
 	rollHoverPID.setOutputLimits(-1023,1023);
 	nickHoverPID.setOutputLimits(-1023,1023);
-	yawHoverPID.setOutputLimits(-1023,1023);
 	rollAcroPID.setOutputLimits(-1023,1023);
 	nickAcroPID.setOutputLimits(-1023,1023);
-	yawAcroPID.setOutputLimits(-1023,1023);
+	yawPID.setOutputLimits(-1023,1023);
 
 	//Reset configuration
 	if(RESET_CONFIG == 1) config.reset();
@@ -71,11 +70,11 @@ void Tricopter::reconfigure(){
 	//Setup PID
 	rollHoverPID.setTunings((float)config.get(CV_HOVER_PID_KP_BYTE) / 25, (float)config.get(CV_HOVER_PID_KI_BYTE) / 25500, (float)config.get(CV_HOVER_PID_KD_BYTE) / 2);
 	nickHoverPID.setTunings((float)config.get(CV_HOVER_PID_KP_BYTE) / 25, (float)config.get(CV_HOVER_PID_KI_BYTE) / 25500, (float)config.get(CV_HOVER_PID_KD_BYTE) / 2);
-	yawHoverPID.setTunings((float)config.get(CV_YAW_PID_KP_BYTE) / 25, (float)config.get(CV_YAW_PID_KI_BYTE) / 25500, (float)config.get(CV_YAW_PID_KD_BYTE) / 2);
-
+	
 	rollAcroPID.setTunings((float)config.get(CV_HOVER_PID_KP_BYTE) / 25, (float)config.get(CV_HOVER_PID_KI_BYTE) / 25500, (float)config.get(CV_HOVER_PID_KD_BYTE) / 2);
 	nickAcroPID.setTunings((float)config.get(CV_HOVER_PID_KP_BYTE) / 25, (float)config.get(CV_HOVER_PID_KI_BYTE) / 25500, (float)config.get(CV_HOVER_PID_KD_BYTE) / 2);
-	yawAcroPID.setTunings((float)config.get(CV_YAW_PID_KP_BYTE) / 25, (float)config.get(CV_YAW_PID_KI_BYTE) / 25500, (float)config.get(CV_YAW_PID_KD_BYTE) / 2);
+	
+	yawPID.setTunings((float)config.get(CV_YAW_PID_KP_BYTE) / 25, (float)config.get(CV_YAW_PID_KI_BYTE) / 25500, (float)config.get(CV_YAW_PID_KD_BYTE) / 2);
 
 	//Setup IMU
 	imu.setAccelWeight((float)config.get(CV_IMU_ACC_WEIGHT_BYTE) / 100);
@@ -153,11 +152,11 @@ void Tricopter::fastLoop(){
 			
 			output.roll = rollHoverPID.updatePid(setPoint.roll, map(imu.getRollDegree(), -180, 180, 0, 1023));
 			output.nick = nickHoverPID.updatePid(setPoint.nick, map(imu.getNickDegree(), -180, 180, 0, 1023));
-			output.yaw = yawHoverPID.updatePid(setPoint.yaw, map(imu.getYawRotation() * 10000, -600, 600, 0, 1023));
+			output.yaw = yawPID.updatePid(setPoint.yaw, map(imu.getYawRotation() * 10000, -600, 600, 0, 1023));
 		/*} else { //Stunt Mode (Gyro stabled)
 			output.roll = rollAcroPID.updatePid(setPoint.roll, imu.getGyroRoll() + 511);
 			output.nick = nickAcroPID.updatePid(setPoint.nick, imu.getGyroNick() + 511);
-			output.yaw = yawAcroPID.updatePid(setPoint.yaw, map(imu.getGyroYawDegree(), -180, 180, 0, 1023));
+			output.yaw = yawPID.updatePid(setPoint.yaw, map(imu.getGyroYawDegree(), -180, 180, 0, 1023));
 		}*/
 
 	} else if(state == STATE_AIRBORNE) setState(STATE_ARMED);
