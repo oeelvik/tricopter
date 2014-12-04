@@ -8,6 +8,7 @@ Mixer *TricopterStream::mix = 0;
 
 
 void TricopterStream::attachAll(DataStream *dataStream){
+	dataStream->attach(&type);
 	dataStream->attach(&time);
 	dataStream->attach(&receiverThrottle);
 	dataStream->attach(&receiverAileron);
@@ -36,10 +37,12 @@ void TricopterStream::attachAll(DataStream *dataStream){
 	dataStream->attach(&mixRightThrust);
 	dataStream->attach(&mixRearThrust);
 	dataStream->attach(&mixYawPos); 
-	//28
+	//29
 }
 
-
+byte TricopterStream::type(){
+	return MESSAGE_TYPE_DATA;
+}
 
 byte TricopterStream::time(){
 	return millis() / 10000;

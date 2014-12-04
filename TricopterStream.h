@@ -23,6 +23,8 @@
 #include <IMURazor.h>
 #include <Mixer.h>
 
+#define MESSAGE_TYPE_DATA 100
+
 class TricopterStream {
 public:
 	static SatelliteReceive *receiver;
@@ -32,6 +34,8 @@ public:
 	static Mixer *mix;
 
 	static void attachAll(DataStream *dataStream);
+
+	static byte type();
 
 	static byte time(); // 1 = 10 sec, 6 = 1 minute
 

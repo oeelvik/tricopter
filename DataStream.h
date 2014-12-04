@@ -26,13 +26,17 @@ public:
 	DataStream() : messageSize(0), next(0) {};
 	void begin(int baudrate); //Not nesseserry if Serial.begin is already called
 	void attach(datasource datasource);
-	void send(); //Send one byte
+	void send();//Send one byte
+	void send(byte numberOfBytes);
+	void flush();
 private:
 	datasource datasources[MAX_MESSAGE_SIZE];
 	byte messageSize;
 	byte next;
 	byte oddsParityByte;
 	byte evenParityByte;
+
+	void sendNextByte();
 };
 
 

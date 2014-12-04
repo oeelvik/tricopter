@@ -10,6 +10,20 @@ void DataStream::attach(datasource datasource){
 }
 
 void DataStream::send(){
+	sendNextByte();
+}
+
+void DataStream::send(byte numberOfBytes){
+	for(byte i = 0; i < numberOfBytes; i++){
+		sendNextByte();
+	}
+}
+
+void DataStream::flush(){
+	while(next != 0) sendNextByte();
+}
+
+void DataStream::sendNextByte(){
 	byte payload;
 	if(next == 0) {
 		payload = HEADER;
