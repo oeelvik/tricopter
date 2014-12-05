@@ -8,7 +8,7 @@
 
  Tricopter::Tricopter() : 
  		config(0), 
- 		groundStation(config, receiver, imu, setPoint, output, mix),
+ 		groundStation(config),
  		state(STATE_CONFIG)
  		{
 
@@ -133,6 +133,9 @@ void Tricopter::fastLoop(){
 		mediumLoop();
 	}
 
+	//Send 2 bytes of data to ground station
+	dataStream.send(2);
+
 	// stopWatch.split();
 	// ############################
 	// ######## Update IMU ########
@@ -219,19 +222,14 @@ void Tricopter::mediumLoop(){
 	    	// stopWatch.split();
 			break;
 	    case 3:
-			groundStation.sendCopter();
 			break;
 	    case 4:
-			groundStation.sendReceiver();
 			break;
 	    case 6:
-			groundStation.sendIMU();
 			break;
 	    case 7:
-			groundStation.happyKillmoreSendAttitude();
 			break;
 	    case 8:
-			groundStation.happyKillmoreSendLocation();
 			break;
 	    case 9:
 			slowLoop();

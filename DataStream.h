@@ -16,8 +16,9 @@
   #include "WProgram.h"
 #endif
 
-#define MAX_MESSAGE_SIZE 50
-#define HEADER 255
+#define MESSAGE_MAX_SIZE 50
+#define MESSAGE_HEADER 255
+#define MESSAGE_TYPE_DATA 100
 
 typedef byte (*datasource)();
 
@@ -30,7 +31,7 @@ public:
 	void send(byte numberOfBytes);
 	void flush();
 private:
-	datasource datasources[MAX_MESSAGE_SIZE];
+	datasource datasources[MESSAGE_MAX_SIZE];
 	byte messageSize;
 	byte next;
 	byte oddsParityByte;

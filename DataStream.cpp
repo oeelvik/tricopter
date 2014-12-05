@@ -26,18 +26,22 @@ void DataStream::flush(){
 void DataStream::sendNextByte(){
 	byte payload;
 	if(next == 0) {
-		payload = HEADER;
+		payload = MESSAGE_HEADER;
 		next++;
-	} else if (next <= messageSize) {
-		payload = datasources[next-1]();
-		if (payload == HEADER) payload = HEADER-1; //Header is reserved for header only
+	}
+	else if(next == 1) {
+		payload = MESSAGE_TYPE_DATA;
+		next++;
+	} else if (next < messageSize + 2) {
+		payload = datasources[next-2]();
+		if (payload == MESSAGE_HEADER) payload = MESSAGE_HEADER-1; //Header is reserved for header only
 		next++;
 		if(payload % 2 == 0) evenParityByte++;
 		else oddsParityByte++;
-	} else if(next == messageSize + 1) {
+	} else if(next == messageSize + 2) {
 		payload = oddsParityByte;
 		next++;
-	} else if(next == messageSize + 2) {
+	} else if(next == messageSize + 3) {
 		payload = evenParityByte;
 		next = 0;
 	}

@@ -12,23 +12,25 @@
   #include "WProgram.h"
 #endif
 
-#include <SatelliteReceive.h>
-#include <IMURazor.h>
-
 #include <Configuration.h>
-#include <Directions.h>
-#include <Mixer.h>
- 
-#define LOG_LEVEL_INFO 0
-#define LOG_LEVEL_WARNING 1
-#define LOG_LEVEL_ERROR 2
 
-#define MAX_MESSAGE_SIZE 50
+
+#define MESSAGE_MAX_SIZE 50
+
+#define MESSAGE_HEADER 255
+
+#define MESSAGE_TYPE_LOG 0
+#define MESSAGE_TYPE_INFO 1
+#define MESSAGE_TYPE_WARN 2
+#define MESSAGE_TYPE_ERROR 3
+#define MESSAGE_TYPE_CONFIG_REQUEST 9
+#define MESSAGE_TYPE_CONFIG 10
+#define MESSAGE_TYPE_DATA 100
 
 
 class GroundStation {
 public:
-	GroundStation(Configuration& config, SatelliteReceive& receiver, IMURazor& imu, Directions& setPoint, Directions& output, Mixer& mix);
+	GroundStation(Configuration& config);
 
 	void regByte(byte inByte);
 
@@ -36,30 +38,18 @@ public:
 	void warning(String message);
 	void error(String message);
 
-	void sendConfig();
-	void sendCopter();
-	void sendReceiver();
-	void sendIMU();
-
-	void happyKillmoreSendAttitude();
-	void happyKillmoreSendLocation();
-
 private:
 
-	bool inMessage;
-	byte receivedByteCount;
-	byte data[MAX_MESSAGE_SIZE];
-	byte CMD;
+	byte data[MESSAGE_MAX_SIZE];
+	byte dataLength;
+	byte parityOdd;
+	byte parityEven;
 
 	Configuration& config;
-	SatelliteReceive& receiver;
-	IMURazor& imu;
-	Directions& setPoint;
-	Directions& output;
-	Mixer& mix;
 
-	void sendMessage(byte type, String message);
-	void executeCommand(byte CMD, byte data[]);
+	void sendString(byte type, String string);
+	void sendConfig();
+	void execute(byte data[]);
 };
 
 
