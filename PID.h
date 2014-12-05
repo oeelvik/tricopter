@@ -6,12 +6,12 @@
 
 #ifndef PID_H_
 #define PID_H_
-class PID{
+class PID {
   public:
     PID();
     void setTunings(double Kp, double Ki, double Kd);
     void setOutputLimits(int outputMin, int outputMax);
-    int updatePid(int setPoint, int input);
+    int update(int setPoint, int input);
     double getKp();
     double getKi();
     double getKd();
@@ -20,10 +20,15 @@ class PID{
     double _Kp;
     double _Ki;
     double _Kd;
-    long _integratedError;
-    int _lastError;
     int _outputMax;
     int _outputMin;
+
+    long _integratedError;
+    int _lastError;
     int _lastOutput;
+    unsigned long lastTime;
+    int expectedDelta;
+    double deltaFactor;
+    
 };
 #endif /* PID_H_ */

@@ -153,9 +153,9 @@ void Tricopter::fastLoop(){
 		//TODO: Refactor and implement stunt mode
 		//if(mode != MODE_STUNT){ //Hover or Position hold Mode (IMU stabled)
 			
-			output.roll = rollHoverPID.updatePid(setPoint.roll, map(imu.getRollDegree(), -180, 180, 0, 1023));
-			output.nick = nickHoverPID.updatePid(setPoint.nick, map(imu.getNickDegree(), -180, 180, 0, 1023));
-			output.yaw = yawPID.updatePid(setPoint.yaw, map(imu.getYawRotation() * 10000, -600, 600, 0, 1023));
+			output.roll = rollHoverPID.update(setPoint.roll, map(imu.getRollDegree(), -180, 180, 0, 1023));
+			output.nick = nickHoverPID.update(setPoint.nick, map(imu.getNickDegree(), -180, 180, 0, 1023));
+			output.yaw = yawPID.update(setPoint.yaw, map(imu.getYawRotation() * 10000, -600, 600, 0, 1023));
 		/*} else { //Stunt Mode (Gyro stabled)
 			output.roll = rollAcroPID.updatePid(setPoint.roll, imu.getGyroRoll() + 511);
 			output.nick = nickAcroPID.updatePid(setPoint.nick, imu.getGyroNick() + 511);
