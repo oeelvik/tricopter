@@ -185,7 +185,8 @@ void Tricopter::mediumLoop(){
 		receiver.regByte(inByte);
 
 		//TODO: remove when soft serial is used
-		groundStation.regByte(inByte);
+		if(state < STATE_ARMED)
+			groundStation.regByte(inByte);
 	}
 
 	// Splits loop into 10 (10Hz each)
