@@ -28,20 +28,16 @@ void DataStream::sendNextByte(){
 	if(next == 0) {
 		payload = MESSAGE_HEADER;
 		next++;
-	}
-	else if(next == 1) {
-		payload = MESSAGE_TYPE_DATA;
-		next++;
-	} else if (next < messageSize + 2) {
-		payload = datasources[next-2]();
+	} else if (next < messageSize + 1) {
+		payload = datasources[next-1]();
 		if (payload == MESSAGE_HEADER) payload = MESSAGE_HEADER-1; //Header is reserved for header only
 		next++;
 		if(payload % 2 == 0) evenParityByte++;
 		else oddsParityByte++;
-	} else if(next == messageSize + 2) {
+	} else if(next == messageSize + 1) {
 		payload = oddsParityByte;
 		next++;
-	} else if(next == messageSize + 3) {
+	} else if(next == messageSize + 2) {
 		payload = evenParityByte;
 		next = 0;
 	}
