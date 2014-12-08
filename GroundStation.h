@@ -49,6 +49,7 @@ private:
 
 	void sendString(byte type, String string);
 	void sendConfig();
+	void send(byte data[], byte size);
 	void execute(byte data[]);
 };
 

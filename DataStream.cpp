@@ -40,6 +40,8 @@ void DataStream::sendNextByte(){
 	} else if(next == messageSize + 2) {
 		payload = evenParityByte;
 		next = 0;
+		oddsParityByte = 0;
+		evenParityByte = 0;
 	}
 	Serial.write(payload);
 }

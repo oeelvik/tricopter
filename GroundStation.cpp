@@ -7,28 +7,37 @@ GroundStation::GroundStation(Configuration& config) : config(config){
 }
 
 void GroundStation::regByte(byte inByte){
-  if(inByte == MESSAGE_HEADER && dataLength > 2) {
-    //Last two bytes i parityBytes and should not be included in parity count
-    if(data[dataLength-1] % 2 == 0) parityEven--;
-    else parityOdd--;
-    if(data[dataLength-2] % 2 == 0) parityEven--;
-    else parityOdd--;
+  if(inByte == MESSAGE_HEADER) {
+    if(dataLength > 2) {
+      //Last two bytes i parityBytes and should not be included in parity count
+      if(data[dataLength-1] % 2 == 0) parityEven--;
+      else parityOdd--;
+      if(data[dataLength-2] % 2 == 0) parityEven--;
+      else parityOdd--;
 
-    //execute valid message
-    if(   
-        data[dataLength-1] == parityEven &&
-        data[dataLength-2] == parityOdd
-        ){
+      //execute valid message
+      if(   
+          data[dataLength-1] == parityEven &&
+          data[dataLength-2] == parityOdd
+          ){
 
-      //Remove parityBytes
-      dataLength--;
-      dataLength--;
+        //Remove parityBytes
+        dataLength--;
+        dataLength--;
 
-      //add valid message to messages
-      execute(data);
+        //add valid message to messages
+        execute(data);
+      } else {
+        //TODO: Enable when using separate serial for GS and Receiver
+        // Probably Receiver signal registerd Ignore until using separate serial connection
+        // error("Invalid message received from ground station (parity does not match)");
+        // error((char*) data);
+      }
     } else {
-      error("Invalid message received from ground station");
-      error((char*) data);
+      //TODO: Enable when using separate serial for GS and Receiver
+      // Probably Receiver signal registerd Ignore until using separate serial connection
+      // error("Invalid message received from ground station (to short)");
+      // error((char*) data);
     }
 
     parityOdd = 0;
@@ -56,23 +65,50 @@ void GroundStation::error(String message){
 }
 
 void GroundStation::sendString(byte type, String string){
-  Serial.write(MESSAGE_HEADER);
-  Serial.write(type);
+  byte size = string.length();
+  char chars[size + 1]; //Dont know why we have to add 1
+  string.toCharArray(chars, size + 1); //Dont know why we have to add 1
 
-  Serial.print(string);
+  byte data[size + 1];
+  data[0] = type;
 
-  Serial.write(MESSAGE_HEADER);
+  for(byte i = 0; i < size; i++){
+    data[i+1] = chars[i];
+  }
+
+  send(data, size + 1);
 }
 
 void GroundStation::sendConfig(){
-  Serial.write(MESSAGE_HEADER);
-  Serial.write(MESSAGE_TYPE_CONFIG);
+  byte size = CV_END_BYTE + 1;
+  byte data[size + 1];
+  data[0] = MESSAGE_TYPE_CONFIG;
 
-  for(byte i=0; i < CV_END_BYTE + 1; i++)
-    Serial.write(config.get(i));
+  for(byte i=0; i < size; i++){
+    data[i+1] = config.get(i);
+  }
 
+  send(data, size + 1);
+}
+
+void GroundStation::send(byte data[], byte size){
+  Serial.flush();
   Serial.write(MESSAGE_HEADER);
-  log("Configuration sendt form tricopter");
+
+  byte odd = 0;
+  byte even = 0;
+  for(byte i=0; i < size; i++){
+    if(data[i] == MESSAGE_HEADER) data[i]--; //Not allowed to be the same as header
+
+    if(data[i] % 2 == 0) even++;
+    else odd++;
+    Serial.write(data[i]);
+  }
+
+  Serial.write(odd);
+  Serial.write(even);
+  Serial.write(MESSAGE_HEADER);
+  Serial.flush();
 }
 
 void GroundStation::execute(byte data[]){
