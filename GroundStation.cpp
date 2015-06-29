@@ -28,16 +28,12 @@ void GroundStation::regByte(byte inByte){
         //add valid message to messages
         execute(data);
       } else {
-        //TODO: Enable when using separate serial for GS and Receiver
-        // Probably Receiver signal registerd Ignore until using separate serial connection
-        // error("Invalid message received from ground station (parity does not match)");
-        // error((char*) data);
+        error("Invalid message received from ground station (parity does not match)");
+        error((char*) data);
       }
     } else {
-      //TODO: Enable when using separate serial for GS and Receiver
-      // Probably Receiver signal registerd Ignore until using separate serial connection
-      // error("Invalid message received from ground station (to short)");
-      // error((char*) data);
+      error("Invalid message received from ground station (to short)");
+      error((char*) data);
     }
 
     parityOdd = 0;
@@ -53,15 +49,15 @@ void GroundStation::regByte(byte inByte){
 }
 
 void GroundStation::log(String message){
-	sendString(MESSAGE_TYPE_LOG, message);
+  sendString(MESSAGE_TYPE_LOG, message);
 }
 
 void GroundStation::warning(String message){
-	sendString(MESSAGE_TYPE_WARN, message);
+  sendString(MESSAGE_TYPE_WARN, message);
 }
 
 void GroundStation::error(String message){
-	sendString(MESSAGE_TYPE_ERROR, message);
+  sendString(MESSAGE_TYPE_ERROR, message);
 }
 
 void GroundStation::sendString(byte type, String string){

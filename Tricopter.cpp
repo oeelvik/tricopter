@@ -25,6 +25,7 @@ void Tricopter::init(){
  	stopWatch.init(); //TODO:remove after benchmark test
  	analogReference(EXTERNAL);
 	Serial.begin(115200);
+	Serial1.begin(115200);
 
 	//Set PID limits
 	rollHoverPID.setOutputLimits(-1023,1023);
@@ -100,9 +101,12 @@ void Tricopter::reconfigure(){
 		(bitRead(reversing,CV_IMU_GYRO_NICK_REV_BIT )==1), 
 		(bitRead(reversing,CV_IMU_GYRO_YAW_REV_BIT )==1) 
 		);
-	imu.init();
+	if(imu.init()) {
+		config.dirty = false;
+	} else {
+		groundStation.log("IMU init failed");
+	}
 
-	config.dirty = false;
 }
 
 
@@ -182,13 +186,17 @@ void Tricopter::mediumLoop(){
 	// ###########################################
 	// ######## Read Serial from receiver ########
 	// ###########################################
-	while (Serial.available() > 0) {
-		byte inByte = Serial.read();
-		receiver.regByte(inByte);
+	while (Serial1.available() > 0) {
+		receiver.regByte(Serial1.read());
+	}
 
-		//TODO: remove when soft serial is used
+
+	// #################################################
+	// ######## Read Serial from Ground Station ########
+	// #################################################
+	while (Serial.available() > 0) {
 		if(state < STATE_ARMED)
-			groundStation.regByte(inByte);
+			groundStation.regByte(Serial.read());
 	}
 
 	// Splits loop into 10 (10Hz each)
