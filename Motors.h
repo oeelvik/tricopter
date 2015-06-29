@@ -35,11 +35,12 @@
 class Motors {
 public:
   Motors();
-  void init();
+  void init(int motors);
   void command(byte command[]);
 
 private:
+	int motors;
 };
 
 
-#endif /* MOTORS_H_ */
+#endif

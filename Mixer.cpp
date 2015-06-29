@@ -6,9 +6,9 @@ Mixer::Mixer(){
 }
 
 void Mixer::init(){
-  motors.init();
+  motors.init(4);
 
-  byte command[4] = {armESC, armESC, armESC, 125};
+  byte command[8] = {armESC, armESC, armESC, 125, 0, 0, 0, 0};
   motors.command(command);
 }
 
@@ -66,7 +66,7 @@ void Mixer::setThrust(int throttle, int roll, int nick, int yaw ){
     
   }
     
-  byte command[4] = {rightThrust, leftThrust, rearThrust, yawPos};
+  byte command[8] = {rightThrust, leftThrust, rearThrust, yawPos, 0, 0, 0, 0};
   motors.command(command);
 }
 
