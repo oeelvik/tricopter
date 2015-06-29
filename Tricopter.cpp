@@ -28,11 +28,11 @@ void Tricopter::init(){
 	Serial1.begin(115200);
 
 	//Set PID limits
-	rollHoverPID.setOutputLimits(-1023,1023);
-	nickHoverPID.setOutputLimits(-1023,1023);
-	rollAcroPID.setOutputLimits(-1023,1023);
-	nickAcroPID.setOutputLimits(-1023,1023);
-	yawPID.setOutputLimits(-1023,1023);
+	rollHoverPID.setOutputLimits(0,1023);
+	nickHoverPID.setOutputLimits(0,1023);
+	rollAcroPID.setOutputLimits(0,1023);
+	nickAcroPID.setOutputLimits(0,1023);
+	yawPID.setOutputLimits(0,1023);
 
 	//Reset configuration
 	if(RESET_CONFIG == 1) config.reset();
@@ -68,13 +68,13 @@ void Tricopter::reconfigure(){
 	mix.init();
 
 	//Setup PID
-	rollHoverPID.setTunings((float)config.get(CV_HOVER_PID_KP_BYTE) / 20, (float)config.get(CV_HOVER_PID_KI_BYTE) / 2000, (float)config.get(CV_HOVER_PID_KD_BYTE));
-	nickHoverPID.setTunings((float)config.get(CV_HOVER_PID_KP_BYTE) / 20, (float)config.get(CV_HOVER_PID_KI_BYTE) / 2000, (float)config.get(CV_HOVER_PID_KD_BYTE));
+	rollHoverPID.setTunings((float)config.get(CV_HOVER_PID_KP_BYTE) / 20, (float)config.get(CV_HOVER_PID_KI_BYTE), (float)config.get(CV_HOVER_PID_KD_BYTE));
+	nickHoverPID.setTunings((float)config.get(CV_HOVER_PID_KP_BYTE) / 20, (float)config.get(CV_HOVER_PID_KI_BYTE), (float)config.get(CV_HOVER_PID_KD_BYTE));
 	
-	rollAcroPID.setTunings((float)config.get(CV_HOVER_PID_KP_BYTE) / 20, (float)config.get(CV_HOVER_PID_KI_BYTE) / 2000, (float)config.get(CV_HOVER_PID_KD_BYTE));
-	nickAcroPID.setTunings((float)config.get(CV_HOVER_PID_KP_BYTE) / 20, (float)config.get(CV_HOVER_PID_KI_BYTE) / 2000, (float)config.get(CV_HOVER_PID_KD_BYTE));
+	rollAcroPID.setTunings((float)config.get(CV_HOVER_PID_KP_BYTE) / 20, (float)config.get(CV_HOVER_PID_KI_BYTE), (float)config.get(CV_HOVER_PID_KD_BYTE));
+	nickAcroPID.setTunings((float)config.get(CV_HOVER_PID_KP_BYTE) / 20, (float)config.get(CV_HOVER_PID_KI_BYTE), (float)config.get(CV_HOVER_PID_KD_BYTE));
 	
-	yawPID.setTunings((float)config.get(CV_YAW_PID_KP_BYTE) / 20, (float)config.get(CV_YAW_PID_KI_BYTE) / 2000, (float)config.get(CV_YAW_PID_KD_BYTE));
+	yawPID.setTunings((float)config.get(CV_YAW_PID_KP_BYTE) / 20, (float)config.get(CV_YAW_PID_KI_BYTE), (float)config.get(CV_YAW_PID_KD_BYTE));
 
 	//Setup IMU
 	imu.setAccelWeight((float)config.get(CV_IMU_ACC_WEIGHT_BYTE) / 1000);

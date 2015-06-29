@@ -4,16 +4,15 @@ PID::PID(){
   _integratedError = 0;
   _lastError = 0;
   lastTime = 0;
-  expectedDelta = 0;
 }
 
-void PID::setTunings(double Kp, double Ki, double Kd){
+void PID::setTunings(double Kp, double Ti, double Td){
   //Scale Accumulated error to the new Tunings
-  _integratedError = _integratedError * _Ki / Ki;
+  _integratedError = _integratedError * (1/_Ti) / (1/Ti);
   
   _Kp = Kp;
-  _Ki = Ki;
-  _Kd = Kd;
+  _Ti = Ti; 
+  _Td = Td;
 }
 
 void PID::setOutputLimits(int outputMin, int outputMax){
@@ -24,33 +23,24 @@ void PID::setOutputLimits(int outputMin, int outputMax){
 int PID::update(int setPoint, int input){
   //Calculate deltaFactor to adjust iTerm and dTerm for difference in sampling time
   unsigned long now = micros();
-  if(expectedDelta > 0){
-    int delta = now - lastTime;
-
-    //TODO: enable, use time sins last update to adjust iTerm and dTerm to account for difference in sampling time
-    deltaFactor = 1;//delta / expectedDelta;
-  }
-  else { //Us difference in first two runns to determine expectedDelta
-    if(lastTime > 0) {
-      expectedDelta = now - lastTime;
-    }
-    lastTime = now;
-  }
+  //Translate micros into second
+  double deltaFactor = (now - lastTime) / 1000000;//micros in 1 sec
+  lastTime = now;
 
   int error = setPoint - input;
   
   //Make shure we dont integrate when limits are reached
   if(!(_lastOutput >= _outputMax && error > 0) && !(_lastOutput <= _outputMin && error<0)) {
-    _integratedError += error * deltaFactor; 
+    _integratedError += error; 
   }
   
-  int pTerm = _Kp * error;
-  int iTerm = _Ki * _integratedError;
-  int dTerm = _Kd * (error - _lastError) / deltaFactor;
+  int pTerm = error;
+  int iTerm = ((1 / _Ti) * _integratedError) * deltaFactor;
+  int dTerm = (_Td * (error - _lastError)) / deltaFactor;
   
   _lastError = error;
   
-  int output = pTerm + iTerm + dTerm;
+  int output = _Kp * (pTerm + iTerm + dTerm);
   _lastOutput = output;
   
   return constrain(output, _outputMin, _outputMax);
@@ -60,10 +50,10 @@ double PID::getKp(){
   return _Kp;
 };
 
-double PID::getKi(){
-  return _Ki;
+double PID::getTi(){
+  return _Ti;
 };
 
-double PID::getKd(){
-  return _Kd;
+double PID::getTd(){
+  return _Td;
 };

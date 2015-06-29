@@ -9,17 +9,17 @@
 class PID {
   public:
     PID();
-    void setTunings(double Kp, double Ki, double Kd);
+    void setTunings(double Kp, double Ti, double Td);
     void setOutputLimits(int outputMin, int outputMax);
     int update(int setPoint, int input);
     double getKp();
-    double getKi();
-    double getKd();
+    double getTi();
+    double getTd();
   
   private:
     double _Kp;
-    double _Ki;
-    double _Kd;
+    double _Ti;
+    double _Td;
     int _outputMax;
     int _outputMin;
 
@@ -27,8 +27,6 @@ class PID {
     int _lastError;
     int _lastOutput;
     unsigned long lastTime;
-    int expectedDelta;
-    double deltaFactor;
     
 };
 #endif /* PID_H_ */
