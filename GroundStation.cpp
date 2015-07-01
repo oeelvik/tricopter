@@ -31,9 +31,6 @@ void GroundStation::regByte(byte inByte){
         error("Invalid message received from ground station (parity does not match)");
         error((char*) data);
       }
-    } else {
-      error("Invalid message received from ground station (to short)");
-      error((char*) data);
     }
 
     parityOdd = 0;
