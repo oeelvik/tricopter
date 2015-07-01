@@ -136,15 +136,15 @@ byte TricopterStream::outputVertical(){
 }
 
 byte TricopterStream::outputRoll(){
-	return map(output->roll, 0, 1023, 0, 254);
+	return map(output->roll, -1023, 1023, 0, 254);
 }
 
 byte TricopterStream::outputNick(){
-	return map(output->nick, 0, 1023, 0, 254);
+	return map(output->nick, -1023, 1023, 0, 254);
 }
 
 byte TricopterStream::outputYaw(){
-	return map(output->yaw, 0, 1023, 0, 254);
+	return map(output->yaw, -1023, 1023, 0, 254);
 }
 
 

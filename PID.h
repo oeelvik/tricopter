@@ -9,22 +9,22 @@
 class PID {
   public:
     PID();
-    void setTunings(double Kp, double Ti, double Td);
+    void setTunings(float Kp, float Ti, float Td);
     void setOutputLimits(int outputMin, int outputMax);
     int update(int setPoint, int input);
-    double getKp();
-    double getTi();
-    double getTd();
+    float getKp();
+    float getTi();
+    float getTd();
   
   private:
-    double _Kp;
-    double _Ti;
-    double _Td;
+    float _Kp;
+    float _Ti;
+    float _Td;
     int _outputMax;
     int _outputMin;
 
-    long _integratedError;
-    int _lastError;
+    float _integratedError;
+    float _lastError;
     int _lastOutput;
     unsigned long lastTime;
     

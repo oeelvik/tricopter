@@ -6,9 +6,11 @@ PID::PID(){
   lastTime = 0;
 }
 
-void PID::setTunings(double Kp, double Ti, double Td){
+void PID::setTunings(float Kp, float Ti, float Td){
   //Scale Accumulated error to the new Tunings
-  _integratedError = _integratedError * (1/_Ti) / (1/Ti);
+  if(_integratedError != 0 && _Ti > 0 && Ti > 0) {
+    _integratedError = _integratedError * _Ti / Ti;
+  }
   
   _Kp = Kp;
   _Ti = Ti; 
@@ -24,36 +26,41 @@ int PID::update(int setPoint, int input){
   //Calculate deltaFactor to adjust iTerm and dTerm for difference in sampling time
   unsigned long now = micros();
   //Translate micros into second
-  double deltaFactor = (now - lastTime) / 1000000;//micros in 1 sec
+  float deltaFactor = (float)(now - lastTime) / 1000000.0;//micros in 1 sec
   lastTime = now;
 
-  int error = setPoint - input;
+  //Check if pid has been on a break, deltaFactor gets to big
+  if(deltaFactor > 0.02) {
+    deltaFactor = 0.007;
+  }
+
+  float error = setPoint - input;
   
   //Make shure we dont integrate when limits are reached
   if(!(_lastOutput >= _outputMax && error > 0) && !(_lastOutput <= _outputMin && error<0)) {
-    _integratedError += error; 
+    _integratedError += error * deltaFactor; 
   }
   
-  int pTerm = error;
-  int iTerm = ((1 / _Ti) * _integratedError) * deltaFactor;
-  int dTerm = (_Td * (error - _lastError)) / deltaFactor;
-  
+  float pTerm = error;
+  float iTerm = (1.0 / _Ti) * _integratedError;
+  float dTerm = _Td * ((error - _lastError) / deltaFactor);
+
   _lastError = error;
   
-  int output = _Kp * (pTerm + iTerm + dTerm);
+  int output = (int) (_Kp * (pTerm + iTerm + dTerm));
   _lastOutput = output;
   
   return constrain(output, _outputMin, _outputMax);
 }
 
-double PID::getKp(){
+float PID::getKp(){
   return _Kp;
 };
 
-double PID::getTi(){
+float PID::getTi(){
   return _Ti;
 };
 
-double PID::getTd(){
+float PID::getTd(){
   return _Td;
 };
