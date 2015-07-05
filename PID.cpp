@@ -4,22 +4,40 @@ PID::PID(){
   _integratedError = 0;
   _lastError = 0;
   lastTime = 0;
+
+  setDTermFilter(1);
 }
 
 void PID::setTunings(float Kp, float Ti, float Td){
   //Scale Accumulated error to the new Tunings
-  if(_integratedError != 0 && _Ti > 0 && Ti > 0) {
+  /*if(_integratedError != 0 && _Ti > 0 && Ti > 0) {
     _integratedError = _integratedError * _Ti / Ti;
-  }
+  }*/
+  _integratedError = 0;
   
   _Kp = Kp;
-  _Ti = Ti; 
+  if(Ti == 0) _Ki = 0;
+  else _Ki = (1.0 / Ti); 
   _Td = Td;
 }
 
 void PID::setOutputLimits(int outputMin, int outputMax){
   _outputMin = outputMin;
   _outputMax = outputMax;
+}
+
+void PID::setDTermFilter(int size) {
+  if(size < 1 ) size = 1;
+  
+  if(_dTerms) delete [] _dTerms;
+  _dTerms = new float[size];
+
+  for (int i = 0; i < size; i++){
+    _dTerms[i] = 0;
+  }
+
+  _dTermFilterSize = size;
+  _dTermFilterPosition = 0;
 }
 
 int PID::update(int setPoint, int input){
@@ -42,8 +60,8 @@ int PID::update(int setPoint, int input){
   }
   
   float pTerm = error;
-  float iTerm = (1.0 / _Ti) * _integratedError;
-  float dTerm = _Td * ((error - _lastError) / deltaFactor);
+  float iTerm = _Ki * _integratedError;
+  float dTerm = filterDTerm(_Td * ((error - _lastError) / deltaFactor));
 
   _lastError = error;
   
@@ -53,14 +71,16 @@ int PID::update(int setPoint, int input){
   return constrain(output, _outputMin, _outputMax);
 }
 
-float PID::getKp(){
-  return _Kp;
-};
+float PID::filterDTerm(float dTerm){
+  _dTerms[_dTermFilterPosition] = dTerm;
+  
+  _dTermFilterPosition++;
+  if(_dTermFilterPosition >= _dTermFilterSize) _dTermFilterPosition = 0;
 
-float PID::getTi(){
-  return _Ti;
-};
+  float sum = 0;
+  for (int i = 0; i < _dTermFilterSize; i++){
+    sum += _dTerms[i];
+  }
 
-float PID::getTd(){
-  return _Td;
-};
+  return sum / _dTermFilterSize;
+}

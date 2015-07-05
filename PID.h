@@ -10,15 +10,18 @@ class PID {
   public:
     PID();
     void setTunings(float Kp, float Ti, float Td);
+    void setDTermFilter(int size);
     void setOutputLimits(int outputMin, int outputMax);
     int update(int setPoint, int input);
-    float getKp();
-    float getTi();
-    float getTd();
   
   private:
+    float filterDTerm(float dTerm);
+    float *_dTerms;
+    int _dTermFilterSize;
+    int _dTermFilterPosition;
+
     float _Kp;
-    float _Ti;
+    float _Ki;
     float _Td;
     int _outputMax;
     int _outputMin;

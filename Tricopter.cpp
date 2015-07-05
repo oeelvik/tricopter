@@ -34,6 +34,13 @@ void Tricopter::init(){
 	nickAcroPID.setOutputLimits(-1023,1023);
 	yawPID.setOutputLimits(-1023,1023);
 
+	//Set pid dTerm filter
+	rollHoverPID.setDTermFilter(6);
+	nickHoverPID.setDTermFilter(6);
+	rollAcroPID.setDTermFilter(6);
+	nickAcroPID.setDTermFilter(6);
+	yawPID.setDTermFilter(6);
+
 	//Reset configuration
 	if(RESET_CONFIG == 1) config.reset();
 
